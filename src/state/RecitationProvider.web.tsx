@@ -1,8 +1,10 @@
 // Web version of the recitation player. iPhone Safari only keeps playing in the background
-// if the same <audio> element carries on, so this uses one element and swaps the ayah file
-// when each one ends, instead of a new element per ayah. Lock screen controls use the
+// if the same <audio> element carries on, so this uses one element for everything.
+// Most reciters play one full-surah file with ayah timings, so there are no gaps between
+// ayahs; the rest swap the ayah file when each one ends. Lock screen controls use the
 // Media Session API.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ayahAt, fullSurahId, loadSurahAudio, type SurahAudio } from '../quran/fullSurah';
 import { RECITERS, ayahUrl } from '../quran/reciters';
 import { SURAHS } from '../quran/surahs';
 import { useSettings } from './SettingsProvider';
@@ -23,6 +25,16 @@ type Recitation = {
 
 const Ctx = createContext<Recitation | null>(null);
 
+type Now = {
+  surah: number | null;
+  index: number;
+  loop: LoopMode;
+  loopedAyah: number;
+  reciter: string;
+  /** Set when a full-surah file is loaded; null when playing ayah by ayah. */
+  full: { reciter: string; surah: number; audio: SurahAudio } | null;
+};
+
 export function RecitationProvider({ children }: { children: ReactNode }) {
   const { settings, update } = useSettings();
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -30,10 +42,20 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoopState] = useState<LoopMode>('off');
+  const request = useRef(0);
 
-  // The ended handler reads these, so keep the latest values in a ref.
-  const now = useRef({ surah: null as number | null, index: 0, loop: 'off' as LoopMode, reciter: settings.reciter });
-  now.current = { surah, index, loop, reciter: settings.reciter };
+  // Event handlers read these, so keep the latest values in a ref.
+  const now = useRef<Now>({ surah: null, index: 0, loop: 'off', loopedAyah: 0, reciter: settings.reciter, full: null });
+  now.current.reciter = settings.reciter;
+
+  function setAt(i: number) {
+    if (i !== now.current.index) {
+      now.current.index = i;
+      setIndex(i);
+      const { surah: s, reciter } = now.current;
+      if (s !== null) showOnLockScreen(s, i, reciter);
+    }
+  }
 
   function el() {
     if (!audio.current) {
@@ -43,29 +65,78 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
       a.addEventListener('play', () => setPlaying(true));
       a.addEventListener('pause', () => setPlaying(false));
       a.addEventListener('ended', onEnded);
+      a.addEventListener('timeupdate', onTime);
       audio.current = a;
     }
     return audio.current;
   }
 
-  function load(s: number, i: number, reciter: string) {
-    const a = el();
-    a.src = ayahUrl(reciter, s, i + 1);
-    a.loop = now.current.loop === 'ayah';
-    setSurah(s);
-    setIndex(i);
-    now.current = { ...now.current, surah: s, index: i };
-    a.play().catch(() => setPlaying(false));
-    showOnLockScreen(s, i, reciter);
+  function onTime() {
+    const a = audio.current;
+    const f = now.current.full;
+    if (!a || !f) return;
+    const t = f.audio.timings;
+    if (now.current.loop === 'ayah') {
+      const own = t[now.current.loopedAyah];
+      if (own && (a.currentTime >= own.to - 0.15 || a.currentTime < own.from - 0.5)) a.currentTime = own.from;
+    }
+    setAt(ayahAt(t, a.currentTime));
   }
 
   function onEnded() {
-    const { surah: s, index: i, loop: l, reciter } = now.current;
+    const { surah: s, index: i, loop: l, reciter, full } = now.current;
     if (s === null) return;
+    if (full) {
+      if (l === 'surah') {
+        audio.current!.currentTime = 0;
+        audio.current!.play().catch(() => {});
+      }
+      return;
+    }
     const total = SURAHS.find((x) => x.id === s)?.verses ?? 0;
-    if (i + 1 < total) load(s, i + 1, reciter);
-    else if (l === 'surah') load(s, 0, reciter);
-    else setPlaying(false);
+    if (i + 1 < total) playOneAyah(s, i + 1, reciter);
+    else if (l === 'surah') playOneAyah(s, 0, reciter);
+  }
+
+  function playOneAyah(s: number, i: number, reciter: string) {
+    const a = el();
+    now.current = { ...now.current, surah: s, full: null };
+    a.src = ayahUrl(reciter, s, i + 1);
+    a.loop = now.current.loop === 'ayah';
+    setAt(i);
+    a.play().catch(() => setPlaying(false));
+  }
+
+  async function start(s: number, i: number, reciter: string) {
+    const ticket = ++request.current;
+    const a = el();
+    setSurah(s);
+    now.current = { ...now.current, surah: s, loopedAyah: i };
+    showOnLockScreen(s, i, reciter);
+    const qdc = fullSurahId(reciter);
+    const f = now.current.full;
+    const sameFile = f && f.surah === s && f.reciter === reciter;
+    if (qdc === null) return playOneAyah(s, i, reciter);
+    if (!sameFile) {
+      // Safari only lets audio start inside a tap, so begin with the single ayah right away and
+      // switch to the gapless full-surah file as soon as its timings arrive.
+      playOneAyah(s, i, reciter);
+    }
+    try {
+      const fileAudio = sameFile ? f!.audio : await loadSurahAudio(qdc, s);
+      if (ticket !== request.current) return;
+      if (!sameFile) {
+        a.src = fileAudio.url;
+        now.current.full = { reciter, surah: s, audio: fileAudio };
+      }
+      a.loop = false;
+      await seek(a, fileAudio.timings[i]?.from ?? 0);
+      if (ticket !== request.current) return;
+      setAt(i);
+      await a.play();
+    } catch {
+      if (ticket === request.current) playOneAyah(s, i, reciter);
+    }
   }
 
   function showOnLockScreen(s: number, i: number, reciter: string) {
@@ -87,17 +158,15 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
         ms.setActionHandler(action, handler);
       } catch {}
     };
-    set('play', () => audio.current?.play());
-    set('pause', () => audio.current?.pause());
-    set('nexttrack', () => {
+    const jump = (by: number) => {
       const { surah: s, index: i, reciter } = now.current;
       const total = SURAHS.find((x) => x.id === s)?.verses ?? 0;
-      if (s !== null && i + 1 < total) load(s, i + 1, reciter);
-    });
-    set('previoustrack', () => {
-      const { surah: s, index: i, reciter } = now.current;
-      if (s !== null && i > 0) load(s, i - 1, reciter);
-    });
+      if (s !== null && i + by >= 0 && i + by < total) void start(s, i + by, reciter);
+    };
+    set('play', () => audio.current?.play());
+    set('pause', () => audio.current?.pause());
+    set('nexttrack', () => jump(1));
+    set('previoustrack', () => jump(-1));
     return () => {
       audio.current?.pause();
     };
@@ -108,7 +177,7 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     index,
     playing,
     loop,
-    playAyah: (s, i) => load(s, i, settings.reciter),
+    playAyah: (s, i) => void start(s, i, settings.reciter),
     toggle: () => {
       const a = audio.current;
       if (!a || surah === null) return;
@@ -118,15 +187,28 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     stop: () => audio.current?.pause(),
     setLoop: (next) => {
       setLoopState(next);
-      now.current = { ...now.current, loop: next };
-      if (audio.current) audio.current.loop = next === 'ayah';
+      now.current.loop = next;
+      now.current.loopedAyah = now.current.index;
+      if (audio.current) audio.current.loop = next === 'ayah' && !now.current.full;
     },
     changeReciter: (reciterId) => {
       update({ reciter: reciterId });
-      if (surah !== null && playing) load(surah, index, reciterId);
+      if (surah !== null && playing) void start(surah, index, reciterId);
     },
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/** Sets the position once the file's length is known; Safari ignores it before that. */
+function seek(a: HTMLAudioElement, seconds: number) {
+  return new Promise<void>((resolve) => {
+    const go = () => {
+      a.currentTime = seconds;
+      resolve();
+    };
+    if (a.readyState >= 1) go();
+    else a.addEventListener('loadedmetadata', go, { once: true });
+  });
 }
 
 export function useRecitation() {
