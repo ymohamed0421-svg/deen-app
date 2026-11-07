@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Fanous, SpeechBubble } from '../../components/Fanous';
-import { StatsBar } from '../../components/StatsBar';
-import { LEAGUE_TIERS } from '../../game/rules';
-import { useGame } from '../../state/GameProvider';
-import { colors } from '../../theme';
+import { Fanous, SpeechBubble } from '../components/Fanous';
+import { StatsBar } from '../components/StatsBar';
+import { LEAGUE_TIERS } from '../game/rules';
+import { useGame } from '../state/GameProvider';
+import { colors } from '../theme';
 
 const TIER_ICONS = ['🌰', '🌱', '🌿', '🌴', '🫒', '🌲'];
 
@@ -13,7 +13,7 @@ export default function LeagueScreen() {
   const tierIndex = 0; // Everyone starts in Seed. Promotion is decided weekly on the server.
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <StatsBar />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Garden League</Text>

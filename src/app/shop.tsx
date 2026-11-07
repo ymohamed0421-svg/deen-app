@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../components/Button';
-import { StatsBar } from '../../components/StatsBar';
-import { MAX_MERCY_DAYS, MAX_OIL, PRICES, canBuy, msUntilNextDrop, type ShopItem } from '../../game/rules';
-import { useGame } from '../../state/GameProvider';
-import { colors } from '../../theme';
+import { Button } from '../components/Button';
+import { StatsBar } from '../components/StatsBar';
+import { MAX_MERCY_DAYS, MAX_OIL, PRICES, canBuy, msUntilNextDrop, type ShopItem } from '../game/rules';
+import { useGame } from '../state/GameProvider';
+import { colors } from '../theme';
 
 export default function ShopScreen() {
   const { state, purchase } = useGame();
@@ -30,7 +30,7 @@ export default function ShopScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <StatsBar />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Shop</Text>

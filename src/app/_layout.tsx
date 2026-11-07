@@ -28,6 +28,9 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
             <Stack.Screen name="lesson/[id]" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
             <Stack.Screen name="quran/[surah]" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen name="garden" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen name="league" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen name="shop" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="duas" options={{ headerShown: true, title: 'Duas' }} />
             <Stack.Screen name="guide" options={{ headerShown: true, title: 'Umrah and Hajj' }} />
             <Stack.Screen name="stories/index" options={{ headerShown: true, title: 'Stories' }} />

@@ -26,9 +26,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="prayer" options={{ title: 'Prayer', tabBarIcon: icon('🕌') }} />
       <Tabs.Screen name="ask" options={{ title: 'Ask', tabBarIcon: icon('💬') }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: icon('✨') }} />
-      <Tabs.Screen name="garden" options={{ href: null }} />
-      <Tabs.Screen name="league" options={{ href: null }} />
-      <Tabs.Screen name="shop" options={{ href: null }} />
     </Tabs>
   );
 }
