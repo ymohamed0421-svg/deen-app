@@ -4,9 +4,10 @@ import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
-import { ChoiceView, MatchView, OrderView } from '../../components/exercises';
+import { ChoiceView, FillView, MatchView, OrderView, TrueFalseView } from '../../components/exercises';
 import { Fanous, SpeechBubble, correctLines, wrongLines } from '../../components/Fanous';
-import { findLesson } from '../../content/units';
+import { exercisesFor, findLesson } from '../../content/units';
+import { useSettings } from '../../state/SettingsProvider';
 import type { Exercise } from '../../content/types';
 import { wouldFinishUnit } from '../../game/progress';
 import { MAX_OIL, type LessonRewards } from '../../game/rules';
@@ -24,9 +25,11 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const found = findLesson(String(id));
   const { state, finishLesson, loseOil } = useGame();
+  const level = useSettings().settings.level ?? 'beginner';
+  const exercises = found ? exercisesFor(found.lesson, level) : [];
 
   // The queue holds exercise indexes. A wrong answer sends the exercise to the back to try again.
-  const [queue, setQueue] = useState<number[]>(() => found?.lesson.exercises.map((_, i) => i) ?? []);
+  const [queue, setQueue] = useState<number[]>(() => exercises.map((_, i) => i));
   const [position, setPosition] = useState(0);
   const [phase, setPhase] = useState<Phase>('teach');
   const [result, setResult] = useState<null | boolean>(null);
@@ -44,10 +47,10 @@ export default function LessonScreen() {
     );
   }
   const { unit, lesson } = found;
-  const total = lesson.exercises.length;
+  const total = exercises.length;
   const solved = position - (queue.length - total); // retries don't count as progress
   const progress = phase === 'done' ? 1 : Math.max(0, Math.min(1, solved / total));
-  const exercise: Exercise | undefined = lesson.exercises[queue[position]];
+  const exercise: Exercise | undefined = exercises[queue[position]];
 
   function onResult(correct: boolean) {
     setResult(correct);
@@ -111,6 +114,8 @@ export default function LessonScreen() {
             {exercise.type === 'choice' && <ChoiceView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
             {exercise.type === 'order' && <OrderView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
             {exercise.type === 'match' && <MatchView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
+            {exercise.type === 'truefalse' && <TrueFalseView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
+            {exercise.type === 'fill' && <FillView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
           </View>
           {result !== null && (
             <View style={[styles.feedback, { backgroundColor: result ? '#DDF1E5' : colors.redLight }]}>

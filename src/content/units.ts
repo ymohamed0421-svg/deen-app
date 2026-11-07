@@ -1,14 +1,17 @@
 // FIRST DRAFT CONTENT. Every lesson is marked `draft` and must be checked by a
 // qualified scholar against its sources before it is set to `approved`.
-import type { Unit } from './types.ts';
+import type { KnowledgeLevel, Lesson, Unit } from './types.ts';
+import { EXTRA_EXERCISES, MORE_UNITS } from './units-more.ts';
+import { STORY_UNITS } from './units-stories.ts';
 
-export const UNITS: Unit[] = [
+const FOUNDATION_UNITS: Unit[] = [
   {
     id: 'pillars',
     title: 'The Five Pillars',
     subtitle: 'What Islam is built on',
     color: '#2F7D5B',
     foundation: true,
+    tier: 'beginner',
     lessons: [
       {
         id: 'pillars-1',
@@ -187,6 +190,7 @@ export const UNITS: Unit[] = [
     subtitle: 'Wudu and the steps of salah',
     color: '#2E6FA3',
     foundation: true,
+    tier: 'beginner',
     lessons: [
       {
         id: 'prayer-1',
@@ -341,6 +345,19 @@ export const UNITS: Unit[] = [
     ],
   },
 ];
+
+export const UNITS: Unit[] = [...FOUNDATION_UNITS, ...STORY_UNITS, ...MORE_UNITS].map((u) => ({
+  ...u,
+  lessons: u.lessons.map((l) => ({ ...l, exercises: [...l.exercises, ...(EXTRA_EXERCISES[l.id] ?? [])] })),
+}));
+
+const RANK: Record<KnowledgeLevel, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+export const levelRank = (l: KnowledgeLevel) => RANK[l];
+
+/** The exercises a learner sees: harder questions only appear at their level or above. */
+export function exercisesFor(lesson: Lesson, level: KnowledgeLevel) {
+  return lesson.exercises.filter((e) => !e.minLevel || RANK[e.minLevel] <= RANK[level]);
+}
 
 export function findLesson(lessonId: string) {
   for (const unit of UNITS) {

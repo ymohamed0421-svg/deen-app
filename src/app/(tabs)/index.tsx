@@ -5,7 +5,9 @@ import { Fanous, SpeechBubble, greetingLine } from '../../components/Fanous';
 import { StatsBar } from '../../components/StatsBar';
 import { UNITS } from '../../content/units';
 import { isDone, isUnlocked, nextLessonId, unitDone } from '../../game/progress';
+import { DailyCard } from '../../components/DailyCard';
 import { useGame } from '../../state/GameProvider';
+import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
 // Nodes wind left and right like a garden path.
@@ -13,7 +15,8 @@ const OFFSETS = [0, 50, 70, 40, -10, -60, -70, -40];
 
 export default function PathScreen() {
   const { state, displayStreak, today } = useGame();
-  const next = nextLessonId(state);
+  const level = useSettings().settings.level ?? 'beginner';
+  const next = nextLessonId(state, level);
   const doneToday = state.streak.lastActiveDate === today;
   const seed = Number(today.replace(/-/g, ''));
 
@@ -26,17 +29,26 @@ export default function PathScreen() {
           <SpeechBubble text={greetingLine({ streak: displayStreak, doneToday, seed })} />
         </View>
 
+        <View style={styles.quickRow}>
+          <QuickLink icon="🌿" label="Garden" onPress={() => router.push('/garden')} />
+          <QuickLink icon="🏅" label="League" onPress={() => router.push('/league')} />
+          <QuickLink icon="🛍️" label="Shop" onPress={() => router.push('/shop')} />
+        </View>
+
+        <DailyCard />
+
         {UNITS.map((unit, u) => (
           <View key={unit.id} style={styles.unit}>
             <View style={[styles.unitHeader, { backgroundColor: unit.color }]}>
               <Text style={styles.unitKicker}>UNIT {u + 1}</Text>
               <Text style={styles.unitTitle}>{unit.title}</Text>
               <Text style={styles.unitSub}>{unit.subtitle}</Text>
+              {unit.tier !== 'beginner' && <Text style={styles.tierTag}>{unit.tier === 'intermediate' ? 'Intermediate' : 'Advanced'}</Text>}
             </View>
 
             {unit.lessons.map((lesson, i) => {
               const done = isDone(state, lesson.id);
-              const open = isUnlocked(state, lesson.id);
+              const open = isUnlocked(state, lesson.id, level);
               const current = lesson.id === next;
               return (
                 <View key={lesson.id} style={[styles.nodeRow, { transform: [{ translateX: OFFSETS[i % OFFSETS.length] }] }]}>
@@ -79,7 +91,20 @@ export default function PathScreen() {
   );
 }
 
+function QuickLink({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.quick} accessibilityRole="button">
+      <Text style={{ fontSize: 22 }}>{icon}</Text>
+      <Text style={styles.quickLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  quickRow: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 12 },
+  quick: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
+  quickLabel: { fontWeight: '800', color: colors.ink, marginTop: 2 },
+  tierTag: { marginTop: 8, alignSelf: 'flex-start', color: '#fff', fontWeight: '800', fontSize: 11, letterSpacing: 1, backgroundColor: '#00000033', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingBottom: 48, paddingHorizontal: 16 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, marginBottom: 8 },

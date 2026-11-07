@@ -12,7 +12,14 @@ A game-like app that teaches the basics of Islam in short daily lessons, built w
 - **Garden**: every finished lesson plants something, and every 7-day streak grows a tree.
 - **Fanous**: the lantern mascot, whose flame grows with your streak.
 
-Units 1 (The Five Pillars) and 2 (How to Pray) are written. All lesson content is a **first draft** and must be reviewed by a qualified scholar before release (see `reviewStatus` in `src/content/units.ts`).
+- **Your level**: on first launch the learner picks Beginner, Intermediate or Advanced. Beginners start at the pillars; others can jump ahead and get harder questions (fiqh details, madhab differences).
+- **Varied lessons**: multiple choice, true or false, fill in the blank, put in order and match the pairs.
+- **Quran**: all 114 surahs in Arabic with English (Saheeh International) and transliteration under every ayah. Audio by 11 reciters including Yasser Al-Dosari, with loop ayah and loop surah. Keeps playing with the screen locked.
+- **Prayer**: prayer times calculated on the phone (adhan library), automatic GPS location or a city chosen by hand, 12 calculation methods, Hanafi or majority Asr, a Qibla compass, and reminders for all five prayers that arrive even when the app is closed.
+- **Ask**: questions answered by Claude through the `ask` Edge Function, citing Quran and hadith and the four madhabs, with a daily limit per person.
+- **More**: hadith or dua of the day, a duas library, Seerah and Companions stories, and an Umrah and Hajj guide.
+
+Units written: The Five Pillars, How to Pray, The Seerah, The Companions (all levels), The Articles of Faith (intermediate) and Prayer in the Four Madhabs (advanced). All lesson content is a **first draft** and must be reviewed by a qualified scholar before release (see `reviewStatus` in `src/content/units.ts`).
 
 ## Run it
 
@@ -35,7 +42,13 @@ npx supabase db push            # creates the tables and security rules
 npm run seed                    # regenerates supabase/seed.sql from the lesson files
 psql "$DATABASE_URL" -f supabase/seed.sql
 npx supabase functions deploy complete-lesson
+npx supabase secrets set ANTHROPIC_API_KEY=your-key   # for the Ask tab
+npx supabase functions deploy ask
 ```
+
+Prayer reminders, background Quran audio and the Qibla compass need a real phone. Notifications don't work in Expo Go on Android, so use a development build (`npx expo run:android` or `eas build --profile development`).
+
+Quran text and translation come from the [quran-json](https://github.com/risan/quran-json) package (CC BY 4.0). Recitations stream from [everyayah.com](https://everyayah.com).
 
 When a lesson is finished, the app calls the `complete-lesson` Edge Function, which recomputes rewards on the server so streaks and leagues can't be faked.
 

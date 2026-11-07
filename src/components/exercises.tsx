@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { ChoiceExercise, MatchExercise, OrderExercise } from '../content/types';
+import type { ChoiceExercise, FillExercise, MatchExercise, OrderExercise, TrueFalseExercise } from '../content/types';
 import { colors } from '../theme';
 import { Button } from './Button';
 
@@ -33,6 +33,63 @@ export function ChoiceView({ exercise, locked, onResult }: Props<ChoiceExercise>
             style={[styles.option, selected === i && styles.optionSelected]}
           >
             <Text style={styles.optionText}>{option}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.spacer} />
+      {!locked && <Button title="Check" disabled={selected === null} onPress={() => onResult(selected === exercise.answer)} />}
+    </View>
+  );
+}
+
+// ---------- true or false ----------
+
+export function TrueFalseView({ exercise, locked, onResult }: Props<TrueFalseExercise>) {
+  const [selected, setSelected] = useState<boolean | null>(null);
+  return (
+    <View style={styles.fill}>
+      <Text style={styles.kicker}>TRUE OR FALSE?</Text>
+      <View style={styles.statement}>
+        <Text style={styles.statementText}>{exercise.statement}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        {[true, false].map((v) => (
+          <Pressable
+            key={String(v)}
+            disabled={locked}
+            onPress={() => setSelected(v)}
+            style={[styles.option, styles.tfOption, selected === v && styles.optionSelected]}
+          >
+            <Text style={styles.tfIcon}>{v ? '✓' : '✗'}</Text>
+            <Text style={styles.optionText}>{v ? 'True' : 'False'}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.spacer} />
+      {!locked && <Button title="Check" disabled={selected === null} onPress={() => onResult(selected === exercise.answer)} />}
+    </View>
+  );
+}
+
+// ---------- fill in the blank ----------
+
+export function FillView({ exercise, locked, onResult }: Props<FillExercise>) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [before, after] = exercise.sentence.split('___');
+  return (
+    <View style={styles.fill}>
+      <Text style={styles.kicker}>FILL IN THE BLANK</Text>
+      <View style={styles.statement}>
+        <Text style={styles.statementText}>
+          {before}
+          <Text style={styles.blank}>{selected === null ? ' ______ ' : ` ${exercise.options[selected]} `}</Text>
+          {after}
+        </Text>
+      </View>
+      <View style={styles.bank}>
+        {exercise.options.map((o, i) => (
+          <Pressable key={o} disabled={locked} onPress={() => setSelected(i)} style={[styles.chip, selected === i && styles.optionSelected]}>
+            <Text style={styles.chipText}>{o}</Text>
           </Pressable>
         ))}
       </View>
@@ -150,6 +207,12 @@ export function MatchView({ exercise, seed, locked, onResult }: Props<MatchExerc
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  kicker: { fontWeight: '900', color: colors.muted, letterSpacing: 1, fontSize: 12, marginBottom: 10 },
+  statement: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line, borderRadius: 16, padding: 18, marginBottom: 20 },
+  statementText: { fontSize: 20, lineHeight: 30, color: colors.ink, fontWeight: '700' },
+  blank: { color: colors.blue, textDecorationLine: 'underline', fontWeight: '900' },
+  tfOption: { flex: 1, alignItems: 'center', paddingVertical: 20 },
+  tfIcon: { fontSize: 28, fontWeight: '900', color: colors.ink },
   spacer: { flex: 1, minHeight: 16 },
   prompt: { fontSize: 22, fontWeight: '800', color: colors.ink, marginBottom: 20, lineHeight: 28 },
   gap: { gap: 10 },
