@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
+import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
 import { findNearbyMasjids, formatDistance, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useSettings, type SavedLocation } from '../state/SettingsProvider';
@@ -93,7 +94,7 @@ export default function MasjidsScreen() {
         </View>
         <Text style={styles.note}>
           These are prayer start times worked out for your spot. Each masjid sets its own iqamah (jama‘ah) time, usually a few
-          minutes later, so check its website or call before you go.
+          minutes later. Where a masjid’s website lists its times, they show on its card.
         </Text>
       </View>
 
@@ -114,7 +115,7 @@ export default function MasjidsScreen() {
         </View>
       )}
 
-      {state.kind === 'done' && state.masjids.map((m) => <MasjidCard key={m.id} masjid={m} />)}
+      {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} />)}
 
       {state.kind === 'done' && state.masjids.length > 0 && (
         <Text style={styles.credit}>Masjid list from OpenStreetMap contributors. A masjid missing? It can be added at openstreetmap.org.</Text>
@@ -123,7 +124,7 @@ export default function MasjidsScreen() {
   );
 }
 
-function MasjidCard({ masjid: m }: { masjid: Masjid }) {
+function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
   const { settings } = useSettings();
   const links = mapLinks(m);
   const next = nextPrayer({ latitude: m.latitude, longitude: m.longitude, name: m.name, auto: false }, settings);
@@ -148,6 +149,7 @@ function MasjidCard({ masjid: m }: { masjid: Masjid }) {
         </Text>
       </View>
       {m.serviceTimes && <Text style={styles.address}>Listed times: {m.serviceTimes}</Text>}
+      {m.website && masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto={auto} />}
 
       <View style={styles.actions}>
         <Chip label="Apple Maps" onPress={() => open(links.apple)} />
@@ -155,6 +157,61 @@ function MasjidCard({ masjid: m }: { masjid: Masjid }) {
         {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
         {m.phone && <Chip label="Call" onPress={() => open(`tel:${m.phone!.replace(/[^\d+]/g, '')}`)} />}
       </View>
+    </View>
+  );
+}
+
+const IQAMAH_ROWS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
+
+/** The masjid's own iqamah and Jumu'ah times, read off its website. */
+function WebsiteTimes({ masjid: m, website, auto }: { masjid: Masjid; website: string; auto: boolean }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'failed' | MasjidTimes>(auto ? 'loading' : 'idle');
+
+  const load = useCallback(() => {
+    setState('loading');
+    fetchMasjidTimes({ id: m.id, name: m.name, website })
+      .then(setState)
+      .catch(() => setState('failed'));
+  }, [m.id, m.name, website]);
+
+  useEffect(() => {
+    if (auto) load();
+  }, [auto, load]);
+
+  if (state === 'idle') return <Chip label="⏱ Get times from its website" onPress={load} />;
+  if (state === 'loading') {
+    return (
+      <View style={styles.siteRow}>
+        <ActivityIndicator color={colors.green} />
+        <Text style={styles.address}>Reading the masjid’s website…</Text>
+      </View>
+    );
+  }
+  if (state === 'failed' || !state.found) {
+    return <Text style={styles.address}>Its website doesn’t list times we could read. Tap Website or Call to check.</Text>;
+  }
+  const rows = IQAMAH_ROWS.filter((p) => state.iqamah[p]);
+  return (
+    <View style={styles.siteCard}>
+      <Text style={styles.siteLabel}>FROM THE MASJID’S WEBSITE</Text>
+      {rows.length > 0 && (
+        <View style={styles.siteGrid}>
+          {rows.map((p) => (
+            <View key={p} style={styles.siteCell}>
+              <Text style={styles.timeName}>{PRAYER_LABELS[p]}</Text>
+              <Text style={styles.siteValue}>{state.iqamah[p]}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {state.jumuah.length > 0 && (
+        <Text style={styles.nextText}>
+          <Text style={{ fontWeight: '900' }}>Jumu‘ah: </Text>
+          {state.jumuah.join(' · ')}
+        </Text>
+      )}
+      {state.note && <Text style={styles.siteNote}>{state.note}</Text>}
+      <Text style={styles.siteNote}>Read automatically, so it can be wrong or out of date. Check with the masjid if it matters.</Text>
     </View>
   );
 }
@@ -191,5 +248,12 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 2, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   chipText: { fontWeight: '800', color: colors.greenDark },
+  siteRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  siteCard: { backgroundColor: '#EAF4EE', borderRadius: 14, padding: 12, gap: 8 },
+  siteLabel: { fontSize: 11, fontWeight: '900', color: colors.green, letterSpacing: 1 },
+  siteGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
+  siteValue: { fontSize: 13, fontWeight: '900', color: colors.ink, marginTop: 2, textAlign: 'center' },
+  siteNote: { color: colors.muted, fontSize: 12, lineHeight: 16 },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
 });

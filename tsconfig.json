@@ -8,6 +8,7 @@
   "exclude": [
     "supabase/functions/complete-lesson",
     "supabase/functions/ask",
+    "supabase/functions/masjid-times",
     "node_modules"
   ]
 }
