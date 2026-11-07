@@ -29,11 +29,7 @@ jobs:
       - name: Serve from /deen-app/
         run: node -e "const f='app.json',j=require('./'+f);j.expo.experiments={...j.expo.experiments,baseUrl:'/deen-app'};require('fs').writeFileSync(f,JSON.stringify(j,null,2))"
       - name: Build
-        env:
-          # Set these under Settings > Secrets and variables > Actions > Variables.
-          # The anon key is safe to publish; never use the service_role key here.
-          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        # Uses the public Supabase settings in .env
         run: npx expo export --platform web --output-dir dist
       - run: node scripts/web-finish.mjs dist /deen-app
       - uses: actions/upload-pages-artifact@v3
