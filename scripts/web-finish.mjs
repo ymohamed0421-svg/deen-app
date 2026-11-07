@@ -35,7 +35,10 @@ const head = [
   '<meta name="apple-mobile-web-app-status-bar-style" content="default">',
   '<meta name="theme-color" content="#2F7D5B">',
 ].join('\n');
-const page = readFileSync(html, 'utf8').replace('</head>', `${head}\n</head>`);
+const page = readFileSync(html, 'utf8')
+  // viewport-fit=cover lets the app read the iPhone's safe areas, so the tab bar sits above the home bar.
+  .replace(/<meta name="viewport" content="([^"]*)"/, (_m, c) => `<meta name="viewport" content="${c}, viewport-fit=cover"`)
+  .replace('</head>', `${head}\n</head>`);
 writeFileSync(html, page);
 // GitHub Pages serves 404.html for unknown paths, so links like /deen-app/quran/2 still open the app.
 writeFileSync(join(dist, '404.html'), page);
