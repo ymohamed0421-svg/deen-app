@@ -32,19 +32,18 @@ Scan the QR code with Expo Go on your phone, or press `w` to open it in the brow
 
 ## Connect Supabase
 
-1. Copy `.env.example` to `.env.local` and fill in your project URL and anon key.
-2. Turn on **Anonymous sign-ins** in Supabase (Authentication > Providers).
-3. Apply the schema and content, then deploy the function:
+The app is set up for the `deen-app` Supabase project: its URL and publishable key are in `.env` (both are public). To create the tables and deploy the functions, run these once from the project folder:
 
 ```bash
-npx supabase link --project-ref YOUR-PROJECT-REF
-npx supabase db push            # creates the tables and security rules
-npm run seed                    # regenerates supabase/seed.sql from the lesson files
-psql "$DATABASE_URL" -f supabase/seed.sql
+npx supabase login                                          # opens the browser
+npx supabase link --project-ref xkfpcpdbqqratcaqxktl        # asks for the database password
+npx supabase db push --include-seed                         # tables, security rules and lesson content
 npx supabase functions deploy complete-lesson
-npx supabase secrets set GEMINI_API_KEY=your-key      # free key from aistudio.google.com/apikey, for the Ask tab
 npx supabase functions deploy ask
+npx supabase secrets set GEMINI_API_KEY=your-key            # optional: free key from aistudio.google.com/apikey for AI answers
 ```
+
+Then turn on **Anonymous sign-ins** in the Supabase dashboard (Authentication > Sign In / Providers). After changing lesson files, run `npm run seed` to regenerate `supabase/seed.sql`.
 
 Prayer reminders, background Quran audio and the Qibla compass need a real phone. Notifications don't work in Expo Go on Android, so use a development build (`npx expo run:android` or `eas build --profile development`).
 
@@ -57,7 +56,7 @@ When a lesson is finished, the app calls the `complete-lesson` Edge Function, wh
 `.github/workflows/web.yml` builds the web version and publishes it with GitHub Pages on every push to `main`, at https://ymohamed0421-svg.github.io/deen-app/. To set it up once:
 
 1. On GitHub, open **Settings > Pages** and set **Source** to **GitHub Actions**.
-2. Under **Settings > Secrets and variables > Actions > Variables**, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (the anon key is meant to be public; never use the service_role key).
+2. The web build reads the public Supabase URL and publishable key from `.env`.
 
 On iPhone, friends open the link in Safari and choose **Share > Add to Home Screen**. Background prayer notifications and the live Qibla compass only work in the phone app.
 
