@@ -35,7 +35,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "node --test supabase/functions/_shared/*.test.ts src/quran/*.test.ts",
+    "test": "node --test supabase/functions/_shared/*.test.ts src/quran/*.test.ts src/lib/*.test.ts",
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/generate-seed.ts"
   },

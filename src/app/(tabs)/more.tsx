@@ -7,6 +7,7 @@ import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
+  { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, prayer times and directions', href: '/masjids' },
   { icon: '🤲', title: 'Duas', text: 'Everyday duas with Arabic, transliteration and meaning', href: '/duas' },
   { icon: '📜', title: 'Stories', text: 'The Seerah and the Companions', href: '/stories' },
   { icon: '🕋', title: 'Umrah and Hajj guide', text: 'Step by step, day by day', href: '/guide' },

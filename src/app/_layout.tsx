@@ -35,6 +35,7 @@ export default function RootLayout() {
             <Stack.Screen name="guide" options={{ headerShown: true, title: 'Umrah and Hajj' }} />
             <Stack.Screen name="stories/index" options={{ headerShown: true, title: 'Stories' }} />
             <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
           </Stack>
           </RecitationProvider>
