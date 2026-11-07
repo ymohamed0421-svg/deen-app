@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Fanous, SpeechBubble } from '../../components/Fanous';
-import { StatsBar } from '../../components/StatsBar';
-import { levelFromNoor } from '../../game/rules';
-import { useGame } from '../../state/GameProvider';
-import { colors } from '../../theme';
+import { Fanous, SpeechBubble } from '../components/Fanous';
+import { StatsBar } from '../components/StatsBar';
+import { levelFromNoor } from '../game/rules';
+import { useGame } from '../state/GameProvider';
+import { colors } from '../theme';
 
 const PLANTS = ['🌱', '🌿', '🌷', '🌼', '🌻', '🪴', '🌳', '🌴'];
 
@@ -16,7 +16,7 @@ export default function GardenScreen() {
   const plots = Math.max(12, state.garden.length + trees + 4);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <StatsBar />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Your garden</Text>

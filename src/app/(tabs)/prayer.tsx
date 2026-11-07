@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { CALC_METHODS, PRAYER_LABELS, formatCountdown, formatTime, nextPrayer, prayerTimes, qiblaBearing } from '../../lib/prayer';
 import { requestReminderPermission } from '../../lib/reminders';
+import { nearestCityName } from '../../lib/useLocation';
 import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
@@ -55,7 +56,7 @@ export default function PrayerScreen() {
         <Text style={styles.title}>Prayer times</Text>
 
         <Pressable onPress={() => router.push('/location')} style={styles.locRow}>
-          <Text style={styles.locText}>📍 {loc.name}</Text>
+          <Text style={styles.locText}>📍 {/^-?\d/.test(loc.name) ? nearestCityName(loc.latitude, loc.longitude) ?? loc.name : loc.name}</Text>
           <Text style={styles.change}>Change</Text>
         </Pressable>
 
@@ -79,13 +80,23 @@ export default function PrayerScreen() {
           })}
         </View>
 
-        <View style={[styles.card, styles.settingRow]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.settingTitle}>Remind me to pray</Text>
-            <Text style={styles.settingText}>A notification at each of the five prayers, even when the app is closed.</Text>
+        {Platform.OS === 'web' ? (
+          <View style={styles.card}>
+            <Text style={styles.settingTitle}>Prayer reminders</Text>
+            <Text style={styles.settingText}>
+              Websites can’t send reminders when they’re closed, so prayer reminders only work in the phone app. Keep this
+              page open to see the countdown to the next prayer.
+            </Text>
           </View>
-          <Switch value={settings.prayerReminders} onValueChange={toggleReminders} trackColor={{ true: colors.green }} />
-        </View>
+        ) : (
+          <View style={[styles.card, styles.settingRow]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingTitle}>Remind me to pray</Text>
+              <Text style={styles.settingText}>A notification at each of the five prayers, even when the app is closed.</Text>
+            </View>
+            <Switch value={settings.prayerReminders} onValueChange={toggleReminders} trackColor={{ true: colors.green }} />
+          </View>
+        )}
 
         <Qibla bearing={qiblaBearing(loc)} />
 
@@ -118,7 +129,10 @@ export default function PrayerScreen() {
               </Pressable>
             ))}
         </View>
-        <Text style={styles.footnote}>Times are calculated on your phone for {loc.name} and shown in your phone’s time zone.</Text>
+        <Text style={styles.footnote}>
+          Times are calculated on your phone for {loc.name} and shown in your phone’s time zone. Other apps and masjids may differ by a
+          minute or two because they add a safety margin or use another method. Pick your masjid’s method above to match it.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

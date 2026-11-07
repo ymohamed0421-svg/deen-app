@@ -1,8 +1,18 @@
-// Plays Quran recitation for the whole app. The ayahs of a surah are queued in a native playlist,
-// so recitation moves from ayah to ayah by itself, keeps going when you leave the surah screen,
-// lock the phone or switch to another app, and can be paused from the lock screen.
-import { setAudioModeAsync, useAudioPlaylist, useAudioPlaylistStatus, type AudioPlaylistLoopMode } from 'expo-audio';
+// Plays Quran recitation for the whole app, so it keeps going when you leave the surah screen,
+// lock the phone or switch apps, with lock screen controls.
+//
+// Most reciters play from one full-surah recording with ayah timings, so there are no gaps
+// between ayahs. Reciters without one play ayah by ayah from a native playlist.
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioPlaylist,
+  useAudioPlaylistStatus,
+  type AudioPlaylistLoopMode,
+} from 'expo-audio';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ayahAt, fullSurahId, loadSurahAudio, type SurahAudio } from '../quran/fullSurah';
 import { RECITERS, ayahUrl } from '../quran/reciters';
 import { SURAHS } from '../quran/surahs';
 import { useSettings } from './SettingsProvider';
@@ -11,7 +21,7 @@ export type LoopMode = 'off' | 'ayah' | 'surah';
 const TO_PLAYLIST: Record<LoopMode, AudioPlaylistLoopMode> = { off: 'none', ayah: 'single', surah: 'all' };
 
 type Recitation = {
-  /** The surah queued in the player, or null when nothing has been played. */
+  /** The surah in the player, or null when nothing has been played. */
   surah: number | null;
   /** Index of the ayah playing in that surah (0 based). */
   index: number;
@@ -28,89 +38,132 @@ const Ctx = createContext<Recitation | null>(null);
 
 export function RecitationProvider({ children }: { children: ReactNode }) {
   const { settings, update } = useSettings();
+
+  // Full-surah player (gapless).
+  const player = useAudioPlayer(null, { updateInterval: 200 });
+  const status = useAudioPlayerStatus(player);
+  const full = useRef<{ surah: number; reciter: string; audio: SurahAudio } | null>(null);
+
+  // Ayah-by-ayah player for reciters without full-surah files, or if those can't load.
   const playlist = useAudioPlaylist({ loop: 'none', updateInterval: 1000 });
-  const status = useAudioPlaylistStatus(playlist);
-  const [surah, setSurah] = useState<number | null>(null);
-  const [loop, setLoopState] = useState<LoopMode>('off');
+  const plStatus = useAudioPlaylistStatus(playlist);
   const queued = useRef<{ surah: number; reciter: string } | null>(null);
 
+  const [mode, setMode] = useState<'full' | 'ayah'>('full');
+  const [surah, setSurah] = useState<number | null>(null);
+  const [loop, setLoopState] = useState<LoopMode>('off');
+  const loopRef = useRef<LoopMode>('off'); // read by start(), which can run in the same tap as setLoop
+  const [loopedAyah, setLoopedAyah] = useState(0);
+  const request = useRef(0);
+  const pendingSeek = useRef<number | null>(null);
+
   useEffect(() => {
-    // Keep reciting with the screen locked, on silent, or in another app.
     setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {});
   }, []);
 
-  function queue(s: number, reciter: string) {
-    if (queued.current?.surah === s && queued.current.reciter === reciter) return;
-    const meta = SURAHS.find((x) => x.id === s);
-    if (!meta) return;
-    playlist.clear();
-    for (let a = 1; a <= meta.verses; a++) playlist.add({ uri: ayahUrl(reciter, s, a) });
-    queued.current = { surah: s, reciter };
-  }
+  const fullIndex = full.current ? ayahAt(full.current.audio.timings, status.currentTime) : 0;
+  const index = mode === 'full' ? fullIndex : plStatus.currentIndex;
 
-  function showOnLockScreen(s: number, reciter: string) {
+  useEffect(() => {
+    if (status.isLoaded && pendingSeek.current !== null) {
+      const to = pendingSeek.current;
+      pendingSeek.current = null;
+      player.seekTo(to).catch(() => {});
+    }
+  }, [status.isLoaded, status.duration]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Loop one ayah in the full-surah file by jumping back to its start.
+  useEffect(() => {
+    if (mode !== 'full' || loop !== 'ayah' || !full.current || !status.playing) return;
+    const t = full.current.audio.timings[loopedAyah];
+    if (t && (status.currentTime >= t.to - 0.08 || status.currentTime < t.from - 0.5)) player.seekTo(t.from);
+  }, [status.currentTime]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function lockScreen(target: { setActiveForLockScreen: (a: boolean, m?: object) => void }, s: number, reciter: string) {
     const meta = SURAHS.find((x) => x.id === s);
-    const name = RECITERS.find((r) => r.id === reciter)?.name;
     try {
-      playlist.setActiveForLockScreen(true, { title: meta ? `${meta.id}. ${meta.name}` : 'Quran', artist: name, albumTitle: 'Deen' });
+      target.setActiveForLockScreen(true, {
+        title: meta ? `${meta.id}. ${meta.name}` : 'Quran',
+        artist: RECITERS.find((r) => r.id === reciter)?.name,
+        albumTitle: 'Deen',
+      });
     } catch {
-      // Lock screen controls are not available everywhere (for example some web browsers).
+      // Not available everywhere.
     }
   }
 
-  function playAyah(s: number, index: number) {
-    queue(s, settings.reciter);
-    setSurah(s);
-    playlist.loop = TO_PLAYLIST[loop];
-    playlist.skipTo(index);
+  function playByAyah(s: number, i: number, reciter: string) {
+    player.pause();
+    if (queued.current?.surah !== s || queued.current.reciter !== reciter) {
+      const meta = SURAHS.find((x) => x.id === s);
+      playlist.clear();
+      for (let a = 1; a <= (meta?.verses ?? 0); a++) playlist.add({ uri: ayahUrl(reciter, s, a) });
+      queued.current = { surah: s, reciter };
+    }
+    setMode('ayah');
+    playlist.loop = TO_PLAYLIST[loopRef.current];
+    playlist.skipTo(i);
     playlist.play();
-    showOnLockScreen(s, settings.reciter);
+    lockScreen(playlist, s, reciter);
   }
 
-  function toggle() {
-    if (surah === null) return;
-    if (status.playing) playlist.pause();
-    else playlist.play();
-  }
-
-  function stop() {
-    playlist.pause();
+  async function start(s: number, i: number, reciter: string) {
+    const ticket = ++request.current;
+    setSurah(s);
+    setLoopedAyah(i);
+    const qdc = fullSurahId(reciter);
+    if (qdc === null) return playByAyah(s, i, reciter);
     try {
-      playlist.clearLockScreenControls();
-    } catch {}
-  }
-
-  function setLoop(next: LoopMode) {
-    setLoopState(next);
-    playlist.loop = TO_PLAYLIST[next];
-  }
-
-  function changeReciter(reciterId: string) {
-    update({ reciter: reciterId });
-    if (surah === null) return;
-    const at = status.currentIndex;
-    const wasPlaying = status.playing;
-    queue(surah, reciterId);
-    playlist.skipTo(at);
-    if (wasPlaying) {
-      playlist.play();
-      showOnLockScreen(surah, reciterId);
+      const sameFile = full.current?.surah === s && full.current.reciter === reciter;
+      const audio = sameFile ? full.current!.audio : await loadSurahAudio(qdc, s);
+      if (ticket !== request.current) return; // the person tapped something else meanwhile
+      playlist.pause();
+      setMode('full');
+      player.loop = loopRef.current === 'surah';
+      if (!sameFile) {
+        // Seeking only works once the new file has loaded; the effect below does it then.
+        full.current = { surah: s, reciter, audio };
+        pendingSeek.current = audio.timings[i]?.from ?? 0;
+        player.replace({ uri: audio.url });
+      } else {
+        await player.seekTo(audio.timings[i]?.from ?? 0);
+      }
+      player.play();
+      lockScreen(player, s, reciter);
+    } catch {
+      if (ticket === request.current) playByAyah(s, i, reciter);
     }
   }
 
-  // The playlist stops after the last ayah when not looping; forget the position then.
-  const finished = status.didJustFinish && loop === 'off' && status.currentIndex >= status.trackCount - 1;
+  const playing = mode === 'full' ? status.playing : plStatus.playing;
 
   const value: Recitation = {
     surah,
-    index: status.currentIndex,
-    playing: status.playing && !finished,
+    index,
+    playing,
     loop,
-    playAyah,
-    toggle,
-    stop,
-    setLoop,
-    changeReciter,
+    playAyah: (s, i) => void start(s, i, settings.reciter),
+    toggle: () => {
+      if (surah === null) return;
+      const p = mode === 'full' ? player : playlist;
+      if (playing) p.pause();
+      else p.play();
+    },
+    stop: () => {
+      player.pause();
+      playlist.pause();
+    },
+    setLoop: (next) => {
+      setLoopState(next);
+      loopRef.current = next;
+      setLoopedAyah(index);
+      player.loop = next === 'surah';
+      playlist.loop = TO_PLAYLIST[next];
+    },
+    changeReciter: (reciterId) => {
+      update({ reciter: reciterId });
+      if (surah !== null && playing) void start(surah, index, reciterId);
+    },
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
