@@ -79,7 +79,7 @@ export default function AskScreen() {
           <Text style={styles.title}>Ask about Islam</Text>
           <Text style={styles.note}>
             Common questions are answered from the app’s library, with Quran and hadith references and where the madhabs
-            differ.{askAvailable ? ' Other questions are answered by AI, which can make mistakes.' : ''} Check important
+            differ.{askAvailable ? ' Other questions are answered by Google’s Gemini AI, which can make mistakes. Don’t type anything private, as Google may use questions to improve its AI.' : ''} Check important
             matters with a qualified scholar.
           </Text>
 
