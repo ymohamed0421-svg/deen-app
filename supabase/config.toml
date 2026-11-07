@@ -428,3 +428,6 @@ verify_jwt = false
 
 [functions.ask]
 verify_jwt = false
+
+[functions.masjid-times]
+verify_jwt = false
