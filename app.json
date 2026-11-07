@@ -23,7 +23,25 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Deen uses your location to work out prayer times and the Qibla direction."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2F7D5B"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ]
     ],
     "scheme": "deenapp"
   }

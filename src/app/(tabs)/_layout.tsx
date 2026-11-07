@@ -1,5 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
 const icon = (glyph: string) => ({ focused }: { focused: boolean }) => (
@@ -7,6 +8,9 @@ const icon = (glyph: string) => ({ focused }: { focused: boolean }) => (
 );
 
 export default function TabsLayout() {
+  const { ready, settings } = useSettings();
+  if (ready && !settings.level) return <Redirect href="/onboarding" />;
+
   return (
     <Tabs
       screenOptions={{
@@ -17,10 +21,14 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontWeight: '700' },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Path', tabBarIcon: icon('🧭') }} />
-      <Tabs.Screen name="garden" options={{ title: 'Garden', tabBarIcon: icon('🌿') }} />
-      <Tabs.Screen name="league" options={{ title: 'League', tabBarIcon: icon('🏅') }} />
-      <Tabs.Screen name="shop" options={{ title: 'Shop', tabBarIcon: icon('🛍️') }} />
+      <Tabs.Screen name="index" options={{ title: 'Learn', tabBarIcon: icon('🧭') }} />
+      <Tabs.Screen name="quran" options={{ title: 'Quran', tabBarIcon: icon('📖') }} />
+      <Tabs.Screen name="prayer" options={{ title: 'Prayer', tabBarIcon: icon('🕌') }} />
+      <Tabs.Screen name="ask" options={{ title: 'Ask', tabBarIcon: icon('💬') }} />
+      <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: icon('✨') }} />
+      <Tabs.Screen name="garden" options={{ href: null }} />
+      <Tabs.Screen name="league" options={{ href: null }} />
+      <Tabs.Screen name="shop" options={{ href: null }} />
     </Tabs>
   );
 }
