@@ -37,9 +37,9 @@ The app is set up for the `deen-app` Supabase project: its URL and publishable k
 ```bash
 npx supabase login                                          # opens the browser
 npx supabase link --project-ref xkfpcpdbqqratcaqxktl        # asks for the database password
-npx supabase db push --include-seed                         # tables, security rules and lesson content
-npx supabase functions deploy complete-lesson
-npx supabase functions deploy ask
+npx supabase db push --remote --include-seed                # tables, security rules and lesson content
+npx supabase functions deploy complete-lesson --remote=xkfpcpdbqqratcaqxktl
+npx supabase functions deploy ask --remote=xkfpcpdbqqratcaqxktl
 npx supabase secrets set GEMINI_API_KEY=your-key            # optional: free key from aistudio.google.com/apikey for AI answers
 ```
 
