@@ -1,5 +1,11 @@
-// Answers questions about Islam with Claude, citing Quran and hadith and the views of the four madhabs.
-// Needs the ANTHROPIC_API_KEY secret: npx supabase secrets set ANTHROPIC_API_KEY=...
+// Answers questions about Islam with AI, citing Quran and hadith and the views of the four madhabs.
+// The app answers common questions from its own library first and only calls this for the rest.
+//
+// Free option: Google Gemini's free tier. Make a key at https://aistudio.google.com/apikey, then
+//   npx supabase secrets set GEMINI_API_KEY=...
+// (Google may use free-tier questions to improve its products.)
+// Paid option: Claude. npx supabase secrets set ANTHROPIC_API_KEY=...
+// If both are set, Gemini is used.
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -9,6 +15,7 @@ const cors = {
 };
 
 const DAILY_LIMIT = 30;
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite';
 
 const SYSTEM = `You are the "Ask" helper inside Deen, an app that teaches Muslims and people curious about Islam.
 
@@ -27,6 +34,56 @@ function json(body: unknown, status = 200) {
 }
 
 type Turn = { role: 'user' | 'assistant'; content: string };
+
+class Busy extends Error {}
+
+/** Calls Gemini's generateContent REST API. */
+async function askGemini(key: string, history: Turn[]): Promise<string> {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: history.map((t) => ({ role: t.role === 'assistant' ? 'model' : 'user', parts: [{ text: t.content }] })),
+      generationConfig: { maxOutputTokens: 8192 },
+    }),
+  });
+  if (res.status === 429) throw new Busy();
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 500)}`);
+  const data = await res.json();
+  const candidate = data.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
+    .map((p: { text?: string }) => p.text ?? '')
+    .join('')
+    .trim();
+  if (!text) return 'I can’t help with that question here. Please ask a qualified scholar or imam.';
+  return text;
+}
+
+/** Calls Claude with the Anthropic SDK. */
+async function askClaude(key: string, history: Turn[]): Promise<string> {
+  const client = new Anthropic({ apiKey: key });
+  try {
+    const response = await client.beta.messages.create({
+      model: 'claude-opus-5-5',
+      max_tokens: 16000,
+      output_config: { effort: 'medium' },
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      system: SYSTEM,
+      messages: history,
+    });
+    if (response.stop_reason === 'refusal') return 'I can’t help with that question here. Please ask a qualified scholar or imam.';
+    return response.content
+      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n')
+      .trim();
+  } catch (error) {
+    if (error instanceof Anthropic.RateLimitError) throw new Busy();
+    throw error;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -59,32 +116,17 @@ Deno.serve(async (req) => {
     return json({ error: `You’ve asked ${DAILY_LIMIT} questions today. Come back tomorrow, in sha Allah.` }, 429);
   }
 
-  const client = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+  const geminiKey = Deno.env.get('GEMINI_API_KEY');
+  const claudeKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!geminiKey && !claudeKey) return json({ error: 'AI answers are not set up yet. Try the library topics instead.' }, 503);
+
   try {
-    const response = await client.beta.messages.create({
-      model: 'claude-opus-5-5',
-      max_tokens: 16000,
-      output_config: { effort: 'medium' },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: SYSTEM,
-      messages: history,
-    });
-
-    if (response.stop_reason === 'refusal') {
-      return json({ answer: 'I can’t help with that question here. Please ask a qualified scholar or imam.' });
-    }
-    const answer = response.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
-      .trim();
-
+    const answer = geminiKey ? await askGemini(geminiKey, history) : await askClaude(claudeKey!, history);
     await admin.from('questions').insert({ user_id: user.id, question: history[history.length - 1].content, answer });
     return json({ answer });
   } catch (error) {
-    if (error instanceof Anthropic.RateLimitError) return json({ error: 'Lots of people are asking right now. Try again in a minute.' }, 503);
-    if (error instanceof Anthropic.APIError) return json({ error: 'The answer service had a problem. Try again soon.' }, 502);
-    throw error;
+    if (error instanceof Busy) return json({ error: 'Lots of people are asking right now. Try again in a minute.' }, 503);
+    console.error(error);
+    return json({ error: 'The answer service had a problem. Try again soon.' }, 502);
   }
 });

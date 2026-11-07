@@ -3,10 +3,13 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SURAHS } from '../../quran/surahs';
+import { useRecitation } from '../../state/RecitationProvider';
 import { colors } from '../../theme';
 
 export default function QuranScreen() {
   const [query, setQuery] = useState('');
+  const rec = useRecitation();
+  const playingSurah = rec.surah ? SURAHS.find((s) => s.id === rec.surah) : null;
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return SURAHS;
@@ -25,6 +28,19 @@ export default function QuranScreen() {
         placeholderTextColor={colors.muted}
         style={styles.search}
       />
+      {playingSurah && (
+        <View style={styles.now}>
+          <Pressable style={{ flex: 1 }} onPress={() => router.push(`/quran/${playingSurah.id}`)}>
+            <Text style={styles.nowLabel}>{rec.playing ? 'NOW RECITING' : 'PAUSED'}</Text>
+            <Text style={styles.nowName}>
+              {playingSurah.name} · ayah {rec.index + 1}
+            </Text>
+          </Pressable>
+          <Pressable onPress={rec.toggle} style={styles.nowBtn} accessibilityLabel={rec.playing ? 'Pause' : 'Play'}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{rec.playing ? '⏸' : '▶'}</Text>
+          </Pressable>
+        </View>
+      )}
       <FlatList
         data={list}
         keyExtractor={(s) => String(s.id)}
@@ -49,6 +65,10 @@ export default function QuranScreen() {
 }
 
 const styles = StyleSheet.create({
+  now: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 14, backgroundColor: colors.green },
+  nowLabel: { color: '#ffffffcc', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  nowName: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  nowBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.greenDark, alignItems: 'center', justifyContent: 'center' },
   safe: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink, paddingHorizontal: 16, paddingTop: 12 },
   search: {
