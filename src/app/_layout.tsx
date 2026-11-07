@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ReminderSync } from '../components/ReminderSync';
 import { GameProvider } from '../state/GameProvider';
+import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider } from '../state/SettingsProvider';
 import { colors } from '../theme';
 
@@ -11,6 +12,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <GameProvider>
+          <RecitationProvider>
           <StatusBar style="dark" />
           <ReminderSync />
           <Stack
@@ -32,6 +34,7 @@ export default function RootLayout() {
             <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
           </Stack>
+          </RecitationProvider>
         </GameProvider>
       </SettingsProvider>
     </SafeAreaProvider>

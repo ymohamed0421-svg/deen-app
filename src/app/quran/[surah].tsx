@@ -1,14 +1,13 @@
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { loadSurah } from '../../quran/load';
-import { RECITERS, ayahUrl } from '../../quran/reciters';
+import { RECITERS } from '../../quran/reciters';
 import { SURAHS } from '../../quran/surahs';
+import { useRecitation, type LoopMode } from '../../state/RecitationProvider';
 import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
-type LoopMode = 'off' | 'ayah' | 'surah';
 const LOOP_LABEL: Record<LoopMode, string> = { off: 'Loop off', ayah: 'Loop ayah', surah: 'Loop surah' };
 const NEXT_LOOP: Record<LoopMode, LoopMode> = { off: 'ayah', ayah: 'surah', surah: 'off' };
 
@@ -17,56 +16,40 @@ export default function SurahScreen() {
   const id = Number(surah);
   const meta = SURAHS.find((s) => s.id === id);
   const ayahs = useMemo(() => loadSurah(id), [id]);
-  const { settings, update } = useSettings();
+  const { settings } = useSettings();
+  const rec = useRecitation();
 
-  const player = useAudioPlayer(null);
-  const status = useAudioPlayerStatus(player);
-  const [current, setCurrent] = useState<number | null>(null); // index of the ayah playing
-  const [loop, setLoop] = useState<LoopMode>('off');
+  // Recitation keeps playing in the background and across screens, so show it only when it is this surah.
+  const here = rec.surah === id;
+  const current = here ? rec.index : null;
+  const playing = here && rec.playing;
+  const loop = rec.loop;
+
   const [showReciters, setShowReciters] = useState(false);
   const [showTranslit, setShowTranslit] = useState(true);
   const listRef = useRef<FlatList>(null);
 
+  // Follow the ayah being recited.
   useEffect(() => {
-    // Keep reciting with the screen locked or the phone on silent.
-    setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true }).catch(() => {});
-  }, []);
-
-  // Looping one ayah is handled by the player itself.
-  useEffect(() => {
-    player.loop = loop === 'ayah';
-  }, [loop, player]);
+    if (current !== null && playing) listRef.current?.scrollToIndex({ index: current, viewPosition: 0.2, animated: true });
+  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function playAyah(index: number) {
-    setCurrent(index);
-    player.replace({ uri: ayahUrl(settings.reciter, id, index + 1) });
-    player.loop = loop === 'ayah';
-    player.play();
-    listRef.current?.scrollToIndex({ index, viewPosition: 0.2, animated: true });
+    rec.playAyah(id, index);
   }
 
-  // When an ayah ends, move to the next one, or wrap around when looping the surah.
-  useEffect(() => {
-    if (!status.didJustFinish || current === null || loop === 'ayah') return;
-    const next = current + 1;
-    if (next < ayahs.length) playAyah(next);
-    else if (loop === 'surah') playAyah(0);
-    else setCurrent(null);
-  }, [status.didJustFinish]); // eslint-disable-line react-hooks/exhaustive-deps
-
   function togglePlay() {
-    if (current === null) return playAyah(0);
-    if (status.playing) player.pause();
-    else player.play();
+    if (!here) return playAyah(0);
+    rec.toggle();
   }
 
   function chooseReciter(reciterId: string) {
-    update({ reciter: reciterId });
     setShowReciters(false);
-    if (current !== null) {
-      player.replace({ uri: ayahUrl(reciterId, id, current + 1) });
-      player.play();
-    }
+    rec.changeReciter(reciterId);
+  }
+
+  function setLoop(next: LoopMode) {
+    rec.setLoop(next);
   }
 
   if (!meta) return <Text style={{ padding: 20 }}>Surah not found</Text>;
@@ -114,10 +97,10 @@ export default function SurahScreen() {
                   </Pressable>
                   <Pressable
                     accessibilityLabel={`Play ayah ${index + 1}`}
-                    onPress={() => (active && status.playing ? player.pause() : playAyah(index))}
+                    onPress={() => (active && playing ? rec.toggle() : playAyah(index))}
                     style={styles.iconBtn}
                   >
-                    <Text style={styles.iconBtnText}>{active && status.playing ? '⏸' : '▶'}</Text>
+                    <Text style={styles.iconBtnText}>{active && playing ? '⏸' : '▶'}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -144,8 +127,8 @@ export default function SurahScreen() {
         <Pressable onPress={() => setLoop(NEXT_LOOP[loop])} style={[styles.loopBtn, loop !== 'off' && styles.loopOn]}>
           <Text style={[styles.loopText, loop !== 'off' && { color: '#fff' }]}>{LOOP_LABEL[loop]}</Text>
         </Pressable>
-        <Pressable onPress={togglePlay} style={styles.playBtn} accessibilityLabel={status.playing ? 'Pause' : 'Play surah'}>
-          <Text style={styles.playText}>{status.playing ? '⏸' : '▶'}</Text>
+        <Pressable onPress={togglePlay} style={styles.playBtn} accessibilityLabel={playing ? 'Pause' : 'Play surah'}>
+          <Text style={styles.playText}>{playing ? '⏸' : '▶'}</Text>
         </Pressable>
       </View>
 
