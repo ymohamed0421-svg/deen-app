@@ -36,6 +36,7 @@ export type Settings = {
   reciter: string;
   prayerReminders: boolean;
   myMasjids: MyMasjid[];
+  kidsMode: boolean; // simpler lessons, bigger pictures and a gentler pace
 };
 
 const DEFAULTS: Settings = {
@@ -46,6 +47,7 @@ const DEFAULTS: Settings = {
   reciter: DEFAULT_RECITER,
   prayerReminders: false,
   myMasjids: [],
+  kidsMode: false,
 };
 
 const KEY = 'deen-app/settings/v1';

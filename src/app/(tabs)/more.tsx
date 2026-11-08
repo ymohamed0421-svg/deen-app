@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DailyCard } from '../../components/DailyCard';
 import { LevelPicker } from '../../components/LevelPicker';
@@ -7,6 +7,8 @@ import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
+  { icon: '🧠', title: 'Memorize the Quran', text: 'Recite from memory and review weak ayahs', href: '/memorize' },
+  { icon: '📖', title: 'Read Arabic', text: 'Learn the letters and read the Quran from zero', href: '/course/arabic' },
   { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, prayer times and directions', href: '/masjids' },
   { icon: '🤲', title: 'Duas', text: 'Everyday duas with Arabic, transliteration and meaning', href: '/duas' },
   { icon: '📜', title: 'Stories', text: 'The Seerah and the Companions', href: '/stories' },
@@ -34,6 +36,20 @@ export default function MoreScreen() {
             <Text style={styles.chev}>›</Text>
           </Pressable>
         ))}
+        <Text style={[styles.title, { fontSize: 20, marginTop: 12 }]}>Kids mode</Text>
+        <View style={styles.row}>
+          <Text style={styles.icon}>🧒</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Kids mode</Text>
+            <Text style={styles.rowText}>Short, simple lessons with big pictures and gentle feedback. Shows the kids path on the Learn tab.</Text>
+          </View>
+          <Switch
+            value={settings.kidsMode}
+            onValueChange={(kidsMode) => update({ kidsMode })}
+            trackColor={{ true: colors.green, false: colors.line }}
+            accessibilityLabel="Kids mode"
+          />
+        </View>
         <Text style={[styles.title, { fontSize: 20, marginTop: 12 }]}>Your level</Text>
         <Text style={styles.rowText}>Lessons and questions adjust to the level you choose.</Text>
         <LevelPicker value={settings.level} onChange={(level) => update({ level })} />

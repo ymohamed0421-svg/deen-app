@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { loadSurah } from '../../quran/load';
@@ -69,6 +69,13 @@ export default function SurahScreen() {
     setShowRange(true);
   }
 
+  // Test yourself on the range you are looping, or the next few ayahs.
+  function openMemorize() {
+    const f = looping ? rec.range.from : (current ?? 0);
+    const t = looping ? rec.range.to : Math.min(f + 6, ayahs.length - 1);
+    router.push(`/memorize/practice?surah=${id}&from=${f}&to=${t}`);
+  }
+
   function startRange() {
     setShowRange(false);
     rec.loopRange(id, from, to);
@@ -113,6 +120,9 @@ export default function SurahScreen() {
                 <Text style={[styles.smallToggleText, looping && { color: '#fff' }]}>
                   🔁 {looping ? `Looping ${rec.range.from + 1}–${rec.range.to + 1}` : 'Loop a range'}
                 </Text>
+              </Pressable>
+              <Pressable onPress={openMemorize} style={styles.smallToggle} accessibilityLabel="Memorize these ayahs">
+                <Text style={styles.smallToggleText}>🧠 Memorize</Text>
               </Pressable>
             </View>
           </View>

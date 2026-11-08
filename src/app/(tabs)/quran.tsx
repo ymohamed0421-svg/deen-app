@@ -2,13 +2,17 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { dueKeys } from '../../quran/memorize';
 import { SURAHS } from '../../quran/surahs';
+import { useGame } from '../../state/GameProvider';
+import { useMemorizeStore } from '../../state/memorizeStore';
 import { useRecitation } from '../../state/RecitationProvider';
 import { colors } from '../../theme';
 
 export default function QuranScreen() {
   const [query, setQuery] = useState('');
   const rec = useRecitation();
+  const due = dueKeys(useMemorizeStore(), useGame().today).length;
   const playingSurah = rec.surah ? SURAHS.find((s) => s.id === rec.surah) : null;
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -28,6 +32,14 @@ export default function QuranScreen() {
         placeholderTextColor={colors.muted}
         style={styles.search}
       />
+      <Pressable style={styles.memo} onPress={() => router.push('/memorize')} accessibilityRole="button">
+        <Text style={{ fontSize: 24 }}>🧠</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.memoTitle}>Memorize</Text>
+          <Text style={styles.meta}>{due > 0 ? `${due} ayah${due === 1 ? '' : 's'} to review today` : 'Hide the words and recite from memory'}</Text>
+        </View>
+        <Text style={styles.chev}>›</Text>
+      </Pressable>
       {playingSurah && (
         <View style={styles.now}>
           <Pressable style={{ flex: 1 }} onPress={() => router.push(`/quran/${playingSurah.id}`)}>
@@ -65,6 +77,9 @@ export default function QuranScreen() {
 }
 
 const styles = StyleSheet.create({
+  memo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 14, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
+  memoTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
+  chev: { fontSize: 26, color: colors.muted },
   now: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 14, backgroundColor: colors.green },
   nowLabel: { color: '#ffffffcc', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   nowName: { color: '#fff', fontWeight: '800', fontSize: 16 },

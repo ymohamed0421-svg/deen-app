@@ -15,24 +15,43 @@ function shuffle<T>(items: T[], seed: number): T[] {
   return a;
 }
 
-type Props<T> = { exercise: T; seed: number; locked: boolean; onResult: (correct: boolean) => void };
+type Props<T> = { exercise: T; seed: number; locked: boolean; onResult: (correct: boolean) => void; big?: boolean };
+
+const ARABIC = /[\u0600-\u06FF]/;
+
+/** Arabic letters and words need to be much bigger than English to read. */
+function textStyle(text: string, big?: boolean) {
+  if (ARABIC.test(text)) return [styles.optionText, styles.arabicText];
+  return big ? [styles.optionText, styles.bigText] : styles.optionText;
+}
+
+function Picture({ value }: { value?: string }) {
+  if (!value) return null;
+  return (
+    <View style={styles.picture}>
+      <Text style={[styles.pictureText, ARABIC.test(value) && styles.pictureArabic]}>{value}</Text>
+    </View>
+  );
+}
 
 // ---------- multiple choice ----------
 
-export function ChoiceView({ exercise, locked, onResult }: Props<ChoiceExercise>) {
+export function ChoiceView({ exercise, locked, onResult, big }: Props<ChoiceExercise>) {
   const [selected, setSelected] = useState<number | null>(null);
+  const glyphs = exercise.options.every((o) => ARABIC.test(o) && o.length <= 4);
   return (
     <View style={styles.fill}>
-      <Text style={styles.prompt}>{exercise.prompt}</Text>
-      <View style={styles.gap}>
+      <Text style={[styles.prompt, big && styles.bigPrompt]}>{exercise.prompt}</Text>
+      <Picture value={exercise.picture} />
+      <View style={[styles.gap, glyphs && styles.glyphRow]}>
         {exercise.options.map((option, i) => (
           <Pressable
             key={option}
             disabled={locked}
             onPress={() => setSelected(i)}
-            style={[styles.option, selected === i && styles.optionSelected]}
+            style={[styles.option, glyphs && styles.glyphOption, big && styles.bigOption, selected === i && styles.optionSelected]}
           >
-            <Text style={styles.optionText}>{option}</Text>
+            <Text style={textStyle(option, big)}>{option}</Text>
           </Pressable>
         ))}
       </View>
@@ -44,13 +63,14 @@ export function ChoiceView({ exercise, locked, onResult }: Props<ChoiceExercise>
 
 // ---------- true or false ----------
 
-export function TrueFalseView({ exercise, locked, onResult }: Props<TrueFalseExercise>) {
+export function TrueFalseView({ exercise, locked, onResult, big }: Props<TrueFalseExercise>) {
   const [selected, setSelected] = useState<boolean | null>(null);
   return (
     <View style={styles.fill}>
-      <Text style={styles.kicker}>TRUE OR FALSE?</Text>
+      <Text style={styles.kicker}>{big ? 'YES OR NO?' : 'TRUE OR FALSE?'}</Text>
+      <Picture value={exercise.picture} />
       <View style={styles.statement}>
-        <Text style={styles.statementText}>{exercise.statement}</Text>
+        <Text style={[styles.statementText, big && { fontSize: 24, lineHeight: 34 }]}>{exercise.statement}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         {[true, false].map((v) => (
@@ -61,7 +81,7 @@ export function TrueFalseView({ exercise, locked, onResult }: Props<TrueFalseExe
             style={[styles.option, styles.tfOption, selected === v && styles.optionSelected]}
           >
             <Text style={styles.tfIcon}>{v ? '✓' : '✗'}</Text>
-            <Text style={styles.optionText}>{v ? 'True' : 'False'}</Text>
+            <Text style={textStyle('x', big)}>{big ? (v ? 'Yes' : 'No') : v ? 'True' : 'False'}</Text>
           </Pressable>
         ))}
       </View>
@@ -121,7 +141,7 @@ export function OrderView({ exercise, seed, locked, onResult }: Props<OrderExerc
             onPress={() => setChosen(chosen.filter((x) => x !== b))}
             style={styles.chip}
           >
-            <Text style={styles.chipText}>
+            <Text style={[styles.chipText, ARABIC.test(bank[b].text) && styles.arabicChip]}>
               {pos + 1}. {bank[b].text}
             </Text>
           </Pressable>
@@ -132,11 +152,11 @@ export function OrderView({ exercise, seed, locked, onResult }: Props<OrderExerc
         {bank.map((item, b) =>
           chosen.includes(b) ? (
             <View key={b} style={[styles.chip, styles.chipGhost]}>
-              <Text style={[styles.chipText, { color: 'transparent' }]}>{item.text}</Text>
+              <Text style={[styles.chipText, ARABIC.test(item.text) && styles.arabicChip, { color: 'transparent' }]}>{item.text}</Text>
             </View>
           ) : (
             <Pressable key={b} disabled={locked} onPress={() => setChosen([...chosen, b])} style={styles.chip}>
-              <Text style={styles.chipText}>{item.text}</Text>
+              <Text style={[styles.chipText, ARABIC.test(item.text) && styles.arabicChip]}>{item.text}</Text>
             </Pressable>
           ),
         )}
@@ -189,7 +209,7 @@ export function MatchView({ exercise, seed, locked, onResult }: Props<MatchExerc
         onPress={() => (side === 'l' ? setPickedLeft(i) : pickRight(i))}
         style={[styles.option, styles.matchCell, active && styles.optionSelected, done && styles.matchDone, wrong && styles.matchWrong]}
       >
-        <Text style={[styles.optionText, done && { color: colors.green }]}>{text}</Text>
+        <Text style={[textStyle(text), done && { color: colors.green }]}>{text}</Text>
       </Pressable>
     );
   };
@@ -207,6 +227,16 @@ export function MatchView({ exercise, seed, locked, onResult }: Props<MatchExerc
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  picture: { alignSelf: 'center', minWidth: 140, paddingHorizontal: 24, paddingVertical: 8, marginBottom: 20, borderRadius: 24, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line, alignItems: 'center' },
+  pictureText: { fontSize: 72, lineHeight: 96, color: colors.ink },
+  pictureArabic: { fontSize: 64, lineHeight: 120 },
+  arabicText: { fontSize: 30, lineHeight: 50, fontWeight: '400', textAlign: 'center' },
+  arabicChip: { fontSize: 24, lineHeight: 40 },
+  bigText: { fontSize: 20, fontWeight: '800' },
+  bigPrompt: { fontSize: 26, lineHeight: 34, textAlign: 'center' },
+  bigOption: { paddingVertical: 18, borderRadius: 20 },
+  glyphRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  glyphOption: { minWidth: 72, alignItems: 'center' },
   kicker: { fontWeight: '900', color: colors.muted, letterSpacing: 1, fontSize: 12, marginBottom: 10 },
   statement: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line, borderRadius: 16, padding: 18, marginBottom: 20 },
   statementText: { fontSize: 20, lineHeight: 30, color: colors.ink, fontWeight: '700' },
