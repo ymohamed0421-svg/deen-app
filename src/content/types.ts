@@ -8,6 +8,7 @@ export type Source = {
 export type ChoiceExercise = {
   type: 'choice';
   prompt: string;
+  picture?: string; // a big letter, word or emoji shown above the options
   options: string[];
   answer: number; // index into options
   explain: string;
@@ -36,6 +37,7 @@ export type MatchExercise = {
 export type TrueFalseExercise = {
   type: 'truefalse';
   statement: string;
+  picture?: string;
   answer: boolean;
   explain: string;
   source?: Source;
@@ -56,10 +58,15 @@ export type Exercise = ChoiceExercise | OrderExercise | MatchExercise | TrueFals
 
 export type ReviewStatus = 'draft' | 'in_review' | 'approved';
 
+/** A big picture card on the teach screen: an Arabic letter, a word or an emoji. */
+export type TeachCard = { big: string; title: string; text?: string };
+
 export type Lesson = {
   id: string;
   title: string;
   teach: string; // short teaching card shown before the exercises
+  cards?: TeachCard[];
+  picture?: string; // an emoji for the lesson, used on the kids path
   story?: string; // longer reading for the Stories library
   exercises: Exercise[];
   reviewStatus: ReviewStatus;
@@ -73,4 +80,13 @@ export type Unit = {
   foundation: boolean; // foundation units never cost Oil
   tier: KnowledgeLevel; // learners above this tier can skip ahead
   lessons: Lesson[];
+};
+
+/** A course that sits beside the main path, with its own screen: the Arabic letters and Kids mode. */
+export type Course = {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  units: Unit[];
 };

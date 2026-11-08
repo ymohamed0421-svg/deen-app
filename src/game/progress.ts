@@ -1,5 +1,5 @@
 import type { KnowledgeLevel } from '../content/types';
-import { UNITS, levelRank } from '../content/units';
+import { ALL_UNITS, UNITS, levelRank } from '../content/units';
 import type { GameState } from './rules';
 
 export const ALL_LESSONS = UNITS.flatMap((u) => u.lessons.map((l) => ({ unit: u, lesson: l })));
@@ -35,13 +35,25 @@ export function nextLessonId(state: GameState, level: KnowledgeLevel = 'beginner
 }
 
 export function unitDone(state: GameState, unitId: string) {
-  const unit = UNITS.find((u) => u.id === unitId);
+  const unit = ALL_UNITS.find((u) => u.id === unitId);
   return Boolean(unit && unit.lessons.every((l) => isDone(state, l.id)));
 }
 
 /** True when finishing `lessonId` would complete its unit for the first time. */
 export function wouldFinishUnit(state: GameState, lessonId: string) {
-  const unit = UNITS.find((u) => u.lessons.some((l) => l.id === lessonId));
+  const unit = ALL_UNITS.find((u) => u.lessons.some((l) => l.id === lessonId));
   if (!unit || unitDone(state, unit.id)) return false;
   return unit.lessons.every((l) => l.id === lessonId || isDone(state, l.id));
+}
+
+/** In a course, lessons open one after another. */
+export function courseLessonOpen(state: GameState, units: { lessons: { id: string }[] }[], lessonId: string) {
+  const ids = units.flatMap((u) => u.lessons.map((l) => l.id));
+  const idx = ids.indexOf(lessonId);
+  return idx <= 0 || isDone(state, ids[idx - 1]) || isDone(state, lessonId);
+}
+
+/** The first lesson in a course that isn't done yet. */
+export function courseNextLesson(state: GameState, units: { lessons: { id: string }[] }[]) {
+  return units.flatMap((u) => u.lessons).find((l) => !isDone(state, l.id))?.id ?? null;
 }

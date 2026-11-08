@@ -3,6 +3,8 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble, greetingLine } from '../../components/Fanous';
 import { StatsBar } from '../../components/StatsBar';
+import { CoursePath } from '../../components/CoursePath';
+import { KIDS_COURSE } from '../../content/course-kids';
 import { UNITS } from '../../content/units';
 import { isDone, isUnlocked, nextLessonId, unitDone } from '../../game/progress';
 import { DailyCard } from '../../components/DailyCard';
@@ -16,7 +18,8 @@ const OFFSETS = [0, 50, 70, 40, -10, -60, -70, -40];
 
 export default function PathScreen() {
   const { state, displayStreak, today } = useGame();
-  const level = useSettings().settings.level ?? 'beginner';
+  const { settings } = useSettings();
+  const level = settings.level ?? 'beginner';
   const next = nextLessonId(state, level);
   const doneToday = state.streak.lastActiveDate === today;
   const seed = Number(today.replace(/-/g, ''));
@@ -30,6 +33,18 @@ export default function PathScreen() {
           <SpeechBubble text={greetingLine({ streak: displayStreak, doneToday, seed })} />
         </View>
 
+        {settings.kidsMode ? (
+          <>
+            <View style={styles.quickRow}>
+              <QuickLink icon="🌿" label="Garden" onPress={() => router.push('/garden')} />
+              <QuickLink icon="ا ب" label="Arabic letters" onPress={() => router.push('/course/arabic')} />
+            </View>
+            <CoursePath course={KIDS_COURSE} big />
+            <Text style={styles.draftNote}>Kids mode is on. Turn it off in More to see the full path.</Text>
+            <Text style={styles.draftNote}>Lesson content is a first draft awaiting review by a qualified scholar.</Text>
+          </>
+        ) : (
+          <>
         <View style={styles.quickRow}>
           <QuickLink icon="🌿" label="Garden" onPress={() => router.push('/garden')} />
           <QuickLink icon="🏅" label="League" onPress={() => router.push('/league')} />
@@ -39,6 +54,11 @@ export default function PathScreen() {
         <WorshipCard />
 
         <DailyCard />
+
+        <View style={styles.quickRow}>
+          <FeatureCard icon="ا ب" title="Read Arabic" text="Letters to Quran words" onPress={() => router.push('/course/arabic')} />
+          <FeatureCard icon="🧠" title="Memorize" text="Recite from memory" onPress={() => router.push('/memorize')} />
+        </View>
 
         {UNITS.map((unit, u) => (
           <View key={unit.id} style={styles.unit}>
@@ -89,6 +109,8 @@ export default function PathScreen() {
           <Text style={styles.comingText}>The six articles of faith, short surahs for salah, and the 40 Hadith of Imam an-Nawawi.</Text>
         </View>
         <Text style={styles.draftNote}>Lesson content is a first draft awaiting review by a qualified scholar.</Text>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -103,7 +125,21 @@ function QuickLink({ icon, label, onPress }: { icon: string; label: string; onPr
   );
 }
 
+function FeatureCard({ icon, title, text, onPress }: { icon: string; title: string; text: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.feature} accessibilityRole="button">
+      <Text style={styles.featureIcon}>{icon}</Text>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureText}>{text}</Text>
+    </Pressable>
+  );
+}
+
 const styles = themed(() => ({
+  feature: { flex: 1, padding: 12, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
+  featureIcon: { fontSize: 24, color: colors.blue, fontWeight: '700' },
+  featureTitle: { fontWeight: '900', color: colors.ink, fontSize: 16, marginTop: 4 },
+  featureText: { color: colors.muted, fontSize: 13, marginTop: 2 },
   quickRow: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 12 },
   quick: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
   quickLabel: { fontWeight: '800', color: colors.ink, marginTop: 2 },

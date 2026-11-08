@@ -1,6 +1,7 @@
 // FIRST DRAFT CONTENT. Every lesson is marked `draft` and must be checked by a
 // qualified scholar against its sources before it is set to `approved`.
 import type { KnowledgeLevel, Lesson, Unit } from './types.ts';
+import { COURSES } from './courses.ts';
 import { EXTRA_EXERCISES, MORE_UNITS } from './units-more.ts';
 import { STORY_UNITS } from './units-stories.ts';
 
@@ -359,8 +360,11 @@ export function exercisesFor(lesson: Lesson, level: KnowledgeLevel) {
   return lesson.exercises.filter((e) => !e.minLevel || RANK[e.minLevel] <= RANK[level]);
 }
 
+/** The main path plus every course, for looking lessons up by id. */
+export const ALL_UNITS: Unit[] = [...UNITS, ...COURSES.flatMap((c) => c.units)];
+
 export function findLesson(lessonId: string) {
-  for (const unit of UNITS) {
+  for (const unit of ALL_UNITS) {
     const index = unit.lessons.findIndex((l) => l.id === lessonId);
     if (index >= 0) return { unit, lesson: unit.lessons[index], index };
   }

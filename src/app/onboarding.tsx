@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Fanous, SpeechBubble } from '../components/Fanous';
@@ -11,6 +11,7 @@ import { colors, themed } from '../theme';
 export default function Onboarding() {
   const { settings, update } = useSettings();
   const [level, setLevel] = useState<KnowledgeLevel | null>(settings.level);
+  const [kids, setKids] = useState(settings.kidsMode);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -19,14 +20,27 @@ export default function Onboarding() {
           <Fanous size={90} mood="cheer" />
           <SpeechBubble text="Assalamu alaikum! I’m Fanous. How well do you know Islam? I’ll shape your lessons to fit you." />
         </View>
-        <LevelPicker value={level} onChange={setLevel} />
+        <LevelPicker value={kids ? null : level} onChange={(l) => { setLevel(l); setKids(false); }} />
+        <Pressable
+          onPress={() => setKids(true)}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: kids }}
+          style={[styles.option, kids && styles.optionSelected]}
+        >
+          <Text style={styles.icon}>🧒</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>For a child</Text>
+            <Text style={styles.text}>Kids mode: short, simple lessons with big pictures and a gentle pace.</Text>
+          </View>
+        </Pressable>
         <Text style={styles.note}>You can change this any time in More.</Text>
         <Button
           title="Continue"
-          disabled={!level}
+          disabled={!level && !kids}
           onPress={() => {
-            if (!level) return;
-            update({ level });
+            if (kids) update({ level: 'beginner', kidsMode: true });
+            else if (level) update({ level, kidsMode: false });
+            else return;
             router.replace('/');
           }}
         />

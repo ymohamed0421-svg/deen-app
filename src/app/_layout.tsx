@@ -63,6 +63,9 @@ function ThemedApp() {
         <Stack.Screen name="guide" options={{ headerShown: true, title: 'Umrah and Hajj' }} />
         <Stack.Screen name="stories/index" options={{ headerShown: true, title: 'Stories' }} />
         <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
+        <Stack.Screen name="memorize/index" options={{ headerShown: true, title: 'Memorize the Quran' }} />
+        <Stack.Screen name="memorize/practice" options={{ headerShown: true, title: '' }} />
+        <Stack.Screen name="course/[id]" options={{ headerShown: true, title: '' }} />
         <Stack.Screen name="zakat" options={{ headerShown: true, title: 'Zakat calculator' }} />
         <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
         <Stack.Screen name="dhikr" options={{ headerShown: true, title: 'Dhikr' }} />

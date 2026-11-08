@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { ChoiceView, FillView, MatchView, OrderView, TrueFalseView } from '../../components/exercises';
 import { Fanous, SpeechBubble, correctLines, wrongLines } from '../../components/Fanous';
+import { courseOfUnit } from '../../content/courses';
 import { exercisesFor, findLesson } from '../../content/units';
 import { useSettings } from '../../state/SettingsProvider';
 import type { Exercise } from '../../content/types';
@@ -16,6 +17,9 @@ import { colors, themed } from '../../theme';
 
 type Phase = 'teach' | 'play' | 'done' | 'out-of-oil';
 
+// Kids never see "wrong": just a gentle nudge to have another go.
+const KIDS_TRY_AGAIN = ['Good try! Let’s look again.', 'Almost! You’ll get it next time.', 'Nice try! Here’s the answer.'];
+
 function haptic(kind: 'ok' | 'bad') {
   if (Platform.OS === 'web') return;
   Haptics.notificationAsync(kind === 'ok' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => {});
@@ -25,8 +29,13 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const found = findLesson(String(id));
   const { state, finishLesson, loseOil } = useGame();
-  const level = useSettings().settings.level ?? 'beginner';
-  const exercises = found ? exercisesFor(found.lesson, level) : [];
+  const { settings } = useSettings();
+  const level = settings.level ?? 'beginner';
+  const course = found ? courseOfUnit(found.unit.id) : undefined;
+  // Kids mode: bigger pictures and text, gentle wording and short lessons.
+  const kids = settings.kidsMode || course?.id === 'kids';
+  const all = found ? exercisesFor(found.lesson, level) : [];
+  const exercises = kids ? all.slice(0, 4) : all;
 
   // The queue holds exercise indexes. A wrong answer sends the exercise to the back to try again.
   const [queue, setQueue] = useState<number[]>(() => exercises.map((_, i) => i));
@@ -96,12 +105,32 @@ export default function LessonScreen() {
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.kicker}>{unit.title.toUpperCase()}</Text>
           <Text style={styles.title}>{lesson.title}</Text>
+          {kids && lesson.picture && <Text style={styles.teachPicture}>{lesson.picture}</Text>}
           <View style={styles.teachCard}>
-            <Text style={styles.teachText}>{lesson.teach}</Text>
+            <Text style={[styles.teachText, kids && { fontSize: 20, lineHeight: 30 }]}>{lesson.teach}</Text>
           </View>
+          {lesson.cards && (
+            <View style={styles.cards}>
+              {lesson.cards.map((c) => (
+                <View key={c.big + c.title} style={[styles.card, kids && styles.cardBig]}>
+                  <Text style={[styles.cardGlyph, /[\u0600-\u06FF]/.test(c.big) && styles.cardArabic]}>{c.big}</Text>
+                  <Text style={styles.cardTitle}>{c.title}</Text>
+                  {c.text && <Text style={styles.cardText}>{c.text}</Text>}
+                </View>
+              ))}
+            </View>
+          )}
           <View style={styles.fanousRow}>
             <Fanous size={64} />
-            <SpeechBubble text="Read this, then let’s practise. Mistakes are how we learn." />
+            <SpeechBubble
+              text={
+                kids
+                  ? 'Look at the pictures, then let’s play!'
+                  : course?.id === 'arabic'
+                    ? 'Say each one out loud as you read. Then let’s practise.'
+                    : 'Read this, then let’s practise. Mistakes are how we learn.'
+              }
+            />
           </View>
           <View style={{ height: 24 }} />
           <Button title="Start" color={unit.color} onPress={() => setPhase('play')} />
@@ -111,23 +140,27 @@ export default function LessonScreen() {
       {phase === 'play' && exercise && (
         <View style={styles.playArea}>
           <View style={styles.body} key={`${position}-${queue[position]}`}>
-            {exercise.type === 'choice' && <ChoiceView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
-            {exercise.type === 'order' && <OrderView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
-            {exercise.type === 'match' && <MatchView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
-            {exercise.type === 'truefalse' && <TrueFalseView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
-            {exercise.type === 'fill' && <FillView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
+            {exercise.type === 'choice' && <ChoiceView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} big={kids} />}
+            {exercise.type === 'order' && <OrderView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} big={kids} />}
+            {exercise.type === 'match' && <MatchView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} big={kids} />}
+            {exercise.type === 'truefalse' && <TrueFalseView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} big={kids} />}
+            {exercise.type === 'fill' && <FillView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} big={kids} />}
           </View>
           {result !== null && (
-            <View style={[styles.feedback, { backgroundColor: result ? colors.greenLight : colors.redLight }]}>
-              <Text style={[styles.feedbackTitle, { color: result ? colors.green : colors.red }]}>
-                {result ? correctLines[seed % correctLines.length] : wrongLines[seed % wrongLines.length]}
+            <View style={[styles.feedback, { backgroundColor: result ? colors.greenLight : kids ? colors.goldLight : colors.redLight }]}>
+              <Text style={[styles.feedbackTitle, { color: result ? colors.green : kids ? colors.goldInk : colors.red }, kids && { fontSize: 24 }]}>
+                {result
+                  ? correctLines[seed % correctLines.length]
+                  : kids
+                    ? KIDS_TRY_AGAIN[seed % KIDS_TRY_AGAIN.length]
+                    : wrongLines[seed % wrongLines.length]}
               </Text>
               <Text style={styles.feedbackText}>{exercise.explain}</Text>
               {exercise.source && <Text style={styles.source}>Source: {exercise.source.reference}</Text>}
               <Button
                 title="Continue"
-                color={result ? colors.green : colors.red}
-                shadow={result ? colors.greenDark : colors.redDark}
+                color={result ? colors.green : kids ? colors.gold : colors.red}
+                shadow={result ? colors.greenDark : kids ? colors.goldInk : colors.redDark}
                 onPress={onContinue}
                 style={{ marginTop: 12 }}
               />
@@ -199,6 +232,14 @@ const styles = themed(() => ({
   title: { fontSize: 26, fontWeight: '900', color: colors.ink, marginTop: 4 },
   teachCard: { marginTop: 16, padding: 18, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
   teachText: { fontSize: 17, lineHeight: 26, color: colors.ink },
+  teachPicture: { fontSize: 80, textAlign: 'center', marginTop: 12 },
+  cards: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  card: { width: '47%', flexGrow: 1, alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
+  cardBig: { borderRadius: 24, paddingVertical: 16 },
+  cardGlyph: { fontSize: 44, lineHeight: 60, color: colors.ink },
+  cardArabic: { fontSize: 48, lineHeight: 84, color: colors.blue },
+  cardTitle: { fontWeight: '900', fontSize: 16, color: colors.ink, textAlign: 'center' },
+  cardText: { color: colors.muted, fontSize: 13, marginTop: 2, textAlign: 'center', lineHeight: 18 },
   fanousRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20 },
   feedback: { padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   feedbackTitle: { fontSize: 20, fontWeight: '900' },
