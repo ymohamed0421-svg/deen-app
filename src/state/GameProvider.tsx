@@ -14,6 +14,7 @@ import {
   type ShopItem,
 } from '../game/rules';
 import { syncLessonCompletion } from '../lib/sync';
+import { awardWorship } from '../lib/worship';
 
 const STORAGE_KEY = 'deen-app/game-state/v1';
 
@@ -25,6 +26,8 @@ type GameContextValue = {
   finishLesson: (outcome: LessonOutcome) => LessonRewards;
   loseOil: (foundation: boolean) => void;
   purchase: (item: ShopItem) => boolean;
+  /** Noor from prayer and dhikr. `streak` keeps today's streak alive, like a lesson does. */
+  earnNoor: (noor: number, streak?: boolean) => { streakExtended: boolean; streak: number; milestone: number | null };
   reset: () => void;
 };
 
@@ -91,6 +94,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [state.wallet],
   );
 
+  const earnNoor = useCallback((noor: number, streak = false) => {
+    const result = awardWorship(stateRef.current, noor, toDateKey(new Date()), streak);
+    stateRef.current = result.state;
+    setState(result.state);
+    return { streakExtended: result.streakExtended, streak: result.streak, milestone: result.milestone };
+  }, []);
+
   const reset = useCallback(() => setState(newGameState(Date.now(), toDateKey(new Date()))), []);
 
   const value = useMemo<GameContextValue>(
@@ -102,9 +112,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       finishLesson,
       loseOil,
       purchase,
+      earnNoor,
       reset,
     }),
-    [ready, state, today, finishLesson, loseOil, purchase, reset],
+    [ready, state, today, finishLesson, loseOil, purchase, earnNoor, reset],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

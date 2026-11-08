@@ -5,6 +5,7 @@ import { ReminderSync } from '../components/ReminderSync';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider } from '../state/SettingsProvider';
+import { WorshipProvider } from '../state/WorshipProvider';
 import { colors } from '../theme';
 
 export default function RootLayout() {
@@ -12,6 +13,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <GameProvider>
+          <WorshipProvider>
           <RecitationProvider>
           <StatusBar style="dark" />
           <ReminderSync />
@@ -36,9 +38,13 @@ export default function RootLayout() {
             <Stack.Screen name="stories/index" options={{ headerShown: true, title: 'Stories' }} />
             <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
+            <Stack.Screen name="dhikr" options={{ headerShown: true, title: 'Dhikr' }} />
+            <Stack.Screen name="calendar" options={{ headerShown: true, title: 'Islamic calendar' }} />
+            <Stack.Screen name="ramadan" options={{ headerShown: true, title: 'Ramadan' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
           </Stack>
           </RecitationProvider>
+          </WorshipProvider>
         </GameProvider>
       </SettingsProvider>
     </SafeAreaProvider>
