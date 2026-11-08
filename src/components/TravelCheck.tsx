@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { distanceKm } from '../lib/masjids';
 import { detectLocation } from '../lib/useLocation';
 import { useSettings, type SavedLocation } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const FAR_KM = 80;
 const DISMISSED_KEY = 'deen-app/travel/dismissed';
@@ -73,7 +73,7 @@ export function TravelCheck() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   banner: {
     position: 'absolute',
     left: 12,
@@ -96,4 +96,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   btn: { flex: 1, alignItems: 'center', borderRadius: 12, borderWidth: 2, borderColor: colors.green, paddingVertical: 10 },
   btnText: { fontWeight: '900', color: colors.greenDark },
-});
+}));

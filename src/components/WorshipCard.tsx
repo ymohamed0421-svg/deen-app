@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { toDateKey } from '../game/rules';
 import { formatHijri, hijriOf, inDaysText, upcomingEvents } from '../lib/hijri';
 import { PRAYER_LABELS, formatCountdown } from '../lib/prayer';
 import { usePrayerDay } from '../lib/usePrayerDay';
 import { FARD, dayCounts } from '../lib/worship';
 import { useWorship } from '../state/WorshipProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 /** Home screen card: Hijri date, the next big day, today's prayers and the adhkar. */
 export function WorshipCard() {
@@ -68,11 +68,11 @@ export function WorshipCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line, padding: 14, marginBottom: 12, gap: 10 },
   top: { flexDirection: 'row', alignItems: 'center' },
   hijri: { fontWeight: '900', fontSize: 16, color: colors.ink },
-  event: { color: colors.green, fontWeight: '700', marginTop: 2 },
+  event: { color: colors.greenInk, fontWeight: '700', marginTop: 2 },
   chev: { fontSize: 26, color: colors.muted },
   prayers: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
   label: { fontWeight: '800', color: colors.muted, fontSize: 12, letterSpacing: 0.5 },
@@ -84,4 +84,4 @@ const styles = StyleSheet.create({
   adhkar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.goldLight, borderRadius: 12, padding: 10 },
   adhkarText: { fontWeight: '800', color: colors.ink },
   adhkarNoor: { fontWeight: '800', color: colors.oil },
-});
+}));

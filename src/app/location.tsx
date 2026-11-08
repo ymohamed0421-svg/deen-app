@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { CITIES } from '../lib/cities';
 import { placeLabel, searchPlaces, type Place } from '../lib/geocode';
 import { coords, detectLocation, placeName } from '../lib/useLocation';
 import { useSettings } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 type Row = { key: string; title: string; subtitle: string; latitude: number; longitude: number; label: string };
 
@@ -180,7 +180,7 @@ export default function LocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   current: { color: colors.ink, fontSize: 15 },
   error: { color: colors.red },
   section: { fontWeight: '900', color: colors.ink, fontSize: 16, marginTop: 8 },
@@ -191,4 +191,4 @@ const styles = StyleSheet.create({
   city: { fontSize: 16, fontWeight: '700', color: colors.ink },
   country: { color: colors.muted, fontSize: 13 },
   credit: { color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 8 },
-});
+}));

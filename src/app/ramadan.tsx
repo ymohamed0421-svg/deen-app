@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { RAMADAN_DUAS } from '../content/adhkar';
 import { addDays, daysUntil, hijriOf, ramadanDay } from '../lib/hijri';
@@ -10,7 +10,7 @@ import { JUZ_STARTS } from '../lib/worship';
 import { SURAHS } from '../quran/surahs';
 import { useSettings } from '../state/SettingsProvider';
 import { useWorship } from '../state/WorshipProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const ODD_NIGHTS = [21, 23, 25, 27, 29];
 
@@ -209,7 +209,7 @@ export default function RamadanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   hero: { backgroundColor: '#24324A', borderRadius: 20, padding: 20, alignItems: 'center' },
   heroKicker: { color: colors.gold, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   heroBig: { color: '#fff', fontSize: 34, fontWeight: '900', marginTop: 4 },
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 16 },
   cardTitle: { fontWeight: '900', fontSize: 17, color: colors.ink },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  headStat: { fontWeight: '800', color: colors.green },
+  headStat: { fontWeight: '800', color: colors.greenInk },
   sub: { color: colors.muted, marginTop: 4, lineHeight: 19 },
   arabic: { fontSize: 24, lineHeight: 42, textAlign: 'right', color: colors.ink, marginTop: 8, writingDirection: 'rtl' },
-  translit: { color: colors.green, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
+  translit: { color: colors.greenInk, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
   english: { color: colors.ink, marginTop: 6, lineHeight: 22, fontSize: 15 },
   ref: { color: colors.muted, fontSize: 12, marginTop: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
@@ -246,4 +246,4 @@ const styles = StyleSheet.create({
   nightName: { fontWeight: '800', color: colors.ink },
   nightDate: { color: colors.muted },
   footnote: { color: colors.muted, fontSize: 12, textAlign: 'center', lineHeight: 17 },
-});
+}));

@@ -1,14 +1,14 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { rewardLine } from '../components/PrayerTracker';
 import { AFTER_SALAH, TASBIH_PRESETS, adhkarFor, type AdhkarSet, type Dhikr } from '../content/adhkar';
 import { toDateKey } from '../game/rules';
 import { WORSHIP_REWARDS } from '../lib/worship';
 import { loadSurah } from '../quran/load';
 import { useWorship } from '../state/WorshipProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 type Tab = 'tasbih' | AdhkarSet;
 
@@ -196,7 +196,7 @@ function Adhkar({ set }: { set: AdhkarSet }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   segment: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 0 },
   segBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.card, alignItems: 'center' },
   segOn: { backgroundColor: colors.green, borderColor: colors.green },
@@ -216,11 +216,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  counterFill: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#DDF0E5' },
+  counterFill: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.greenLight },
   counterNum: { fontSize: 72, fontWeight: '900', color: colors.green },
   counterOf: { fontSize: 16, color: colors.muted, fontWeight: '700' },
   counterHint: { fontSize: 12, color: colors.muted, marginTop: 8 },
-  message: { color: colors.green, fontWeight: '800', textAlign: 'center', marginTop: 6 },
+  message: { color: colors.greenInk, fontWeight: '800', textAlign: 'center', marginTop: 6 },
   link: { color: colors.blue, fontWeight: '800' },
   sub: { color: colors.muted, lineHeight: 19, textAlign: 'center' },
   note: { color: colors.muted, fontSize: 12, textAlign: 'center', lineHeight: 17 },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   title: { fontWeight: '900', fontSize: 20, color: colors.ink },
   progressTrack: { height: 12, borderRadius: 6, backgroundColor: colors.bg, overflow: 'hidden', marginTop: 6 },
   progressFill: { height: 12, backgroundColor: colors.green },
-  progressText: { fontWeight: '800', color: colors.green },
+  progressText: { fontWeight: '800', color: colors.greenInk },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line, padding: 16 },
   cardDone: { opacity: 0.6, borderColor: colors.green },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: colors.goldLight },
   badgeText: { fontWeight: '900', color: colors.ink, fontSize: 13 },
   arabic: { fontSize: 24, lineHeight: 44, textAlign: 'right', color: colors.ink, marginTop: 8, writingDirection: 'rtl' },
-  translit: { color: colors.green, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
+  translit: { color: colors.greenInk, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
   english: { color: colors.ink, marginTop: 6, lineHeight: 22, fontSize: 15 },
   virtue: { color: colors.muted, marginTop: 6, lineHeight: 20, fontSize: 14 },
   ref: { color: colors.muted, fontSize: 12, marginTop: 8 },
-});
+}));

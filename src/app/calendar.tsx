@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { HIJRI_MONTHS_AR, HIJRI_SOURCE, formatHijri, hijriOf, inDaysText, upcomingEvents, upcomingSunnahFasts } from '../lib/hijri';
 import { requestReminderPermission } from '../lib/reminders';
 import { useNow } from '../lib/usePrayerDay';
 import { useWorship } from '../state/WorshipProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 function gregorian(d: Date) {
   return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
@@ -107,7 +107,7 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   hero: { backgroundColor: colors.green, borderRadius: 20, padding: 20, alignItems: 'center' },
   heroAr: { color: '#fff', fontSize: 30, fontWeight: '700', writingDirection: 'rtl' },
   heroDate: { color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 6 },
@@ -125,10 +125,10 @@ const styles = StyleSheet.create({
   countNum: { fontSize: 24, fontWeight: '900', color: colors.ink },
   countUnit: { fontSize: 11, fontWeight: '800', color: colors.muted },
   eventTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
-  eventDate: { color: colors.green, fontWeight: '700', marginTop: 2 },
+  eventDate: { color: colors.greenInk, fontWeight: '700', marginTop: 2 },
   fastRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.line },
   fastDate: { fontWeight: '800', color: colors.ink },
   fastReason: { color: colors.muted, flexShrink: 1, textAlign: 'right' },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   footnote: { color: colors.muted, fontSize: 12, textAlign: 'center', lineHeight: 17 },
-});
+}));

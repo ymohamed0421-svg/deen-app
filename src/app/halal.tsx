@@ -1,12 +1,12 @@
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { formatDistance, mapLinks, type Masjid } from '../lib/masjids';
 import { searchHalalFood } from '../lib/nearbyMasjids';
 import { useSettings } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 type State = { kind: 'loading' } | { kind: 'no-location' } | { kind: 'error'; message: string } | { kind: 'done'; places: Masjid[]; fromGps: boolean };
 
@@ -115,7 +115,7 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: colors.bg },
   big: { fontSize: 48 },
   text: { color: colors.ink, fontSize: 16, lineHeight: 22, textAlign: 'center' },
@@ -130,4 +130,4 @@ const styles = StyleSheet.create({
   chip: { borderWidth: 2, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   chipText: { fontWeight: '800', color: colors.greenDark },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
-});
+}));

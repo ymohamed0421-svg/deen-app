@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PRAYER_LABELS, formatTime } from '../lib/prayer';
 import { usePrayerDay } from '../lib/usePrayerDay';
 import { FARD, dayCounts, markFor, weekSummary, type Fard } from '../lib/worship';
 import { useWorship, type Reward } from '../state/WorshipProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -124,7 +124,7 @@ export function PrayerTracker() {
                 {d.prayed - d.onTime > 0 && <View style={[styles.barLate, { flex: d.prayed - d.onTime }]} />}
                 {d.onTime > 0 && <View style={[styles.barOn, { flex: d.onTime }]} />}
               </View>
-              <Text style={[styles.barLabel, on && { color: colors.green, fontWeight: '900' }]}>
+              <Text style={[styles.barLabel, on && { color: colors.greenInk, fontWeight: '900' }]}>
                 {d.key === dayKey ? 'Today' : weekdayOf(d.key)}
               </Text>
             </Pressable>
@@ -149,11 +149,11 @@ export function PrayerTracker() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   title: { fontWeight: '900', fontSize: 18, color: colors.ink },
-  count: { fontWeight: '800', color: colors.green },
+  count: { fontWeight: '800', color: colors.greenInk },
   sub: { color: colors.muted, marginTop: 4, marginBottom: 8, lineHeight: 19 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   check: { width: 34, height: 34, borderRadius: 17, borderWidth: 3, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
@@ -162,10 +162,10 @@ const styles = StyleSheet.create({
   checkGlyph: { color: '#fff', fontWeight: '900', fontSize: 18 },
   name: { fontSize: 17, fontWeight: '800', color: colors.ink },
   time: { color: colors.muted, fontSize: 13 },
-  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: '#EEF8F2' },
+  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: colors.greenLight },
   chipLate: { backgroundColor: colors.goldLight },
-  chipText: { fontWeight: '800', color: colors.green, fontSize: 13 },
-  message: { marginTop: 6, color: colors.green, fontWeight: '800', textAlign: 'center' },
+  chipText: { fontWeight: '800', color: colors.greenInk, fontSize: 13 },
+  message: { marginTop: 6, color: colors.greenInk, fontWeight: '800', textAlign: 'center' },
   chart: { flexDirection: 'row', gap: 6, marginTop: 10, height: 110 },
   barCol: { flex: 1, alignItems: 'center' },
   barTrack: { flex: 1, width: '70%', borderRadius: 8, backgroundColor: colors.bg, overflow: 'hidden' },
@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5 },
   legend: { color: colors.muted, fontSize: 12, marginRight: 6 },
   backToday: { color: colors.blue, fontWeight: '800', textAlign: 'center', marginTop: 10 },
-});
+}));
