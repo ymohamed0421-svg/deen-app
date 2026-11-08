@@ -1,6 +1,6 @@
 // Finishes the web build so friends can open it from a link and add it to their home screen.
 // Usage: node scripts/web-finish.mjs <dist dir> <base path, e.g. /deen-app>
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [dist = 'dist', base = ''] = process.argv.slice(2);
@@ -42,4 +42,16 @@ const page = readFileSync(html, 'utf8')
 writeFileSync(html, page);
 // GitHub Pages serves 404.html for unknown paths, so links like /deen-app/quran/2 still open the app.
 writeFileSync(join(dist, '404.html'), page);
+
+// The next prayer widget for the Scriptable app: the adhan library plus widget/next-prayer.js in one file.
+// The library's UMD wrapper is swapped for a direct call so it always lands in `adhan`, whatever globals exist.
+const umd = readFileSync('node_modules/adhan/lib/bundles/adhan.umd.min.js', 'utf8').replace(/\n\/\/# sourceMappingURL=.*$/, '');
+const umdStart = umd.indexOf('(this,function(t)');
+if (!umd.startsWith('!function(t,e)') || umdStart < 0) throw new Error('adhan bundle changed shape; update scripts/web-finish.mjs');
+const adhanLib = `var adhan = {};\n(function(t,e){e(t)})(adhan,${umd.slice(umdStart + '(this,'.length)}`;
+mkdirSync(join(dist, 'widget'), { recursive: true });
+writeFileSync(
+  join(dist, 'widget', 'next-prayer.js'),
+  `// adhan ${JSON.parse(readFileSync('node_modules/adhan/package.json', 'utf8')).version}, MIT licence, https://github.com/batoulapps/adhan-js\n${adhanLib}\n\n${readFileSync('widget/next-prayer.js', 'utf8')}`,
+);
 console.log('Web build finished in', dist);
