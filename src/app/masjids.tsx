@@ -2,14 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
 import { fetchPlaceMasjids } from '../lib/nearbyMasjids';
 import { distanceKm, findNearbyMasjids, formatDistance, mergeMasjids, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 type Origin = { latitude: number; longitude: number; fromGps: boolean };
 type State =
@@ -373,7 +373,7 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: colors.bg },
   big: { fontSize: 48 },
   text: { color: colors.ink, fontSize: 16, lineHeight: 22, textAlign: 'center' },
@@ -396,9 +396,9 @@ const styles = StyleSheet.create({
   nextText: { color: colors.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 2, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  chipText: { fontWeight: '800', color: colors.greenDark },
+  chipText: { fontWeight: '800', color: colors.greenInk },
   siteRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  siteCard: { backgroundColor: '#EAF4EE', borderRadius: 14, padding: 12, gap: 8 },
+  siteCard: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 12, gap: 8 },
   siteLabel: { fontSize: 11, fontWeight: '900', color: colors.green, letterSpacing: 1 },
   siteGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
@@ -407,4 +407,4 @@ const styles = StyleSheet.create({
   section: { fontSize: 18, fontWeight: '900', color: colors.ink, marginTop: 4 },
   input: { borderWidth: 2, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.ink, backgroundColor: colors.bg },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
-});
+}));

@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { CITIES } from '../lib/cities';
 import { detectLocation } from '../lib/useLocation';
 import { useSettings } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export default function LocationScreen() {
   const { settings, update } = useSettings();
@@ -102,7 +102,7 @@ export default function LocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   current: { color: colors.ink, fontSize: 15 },
   error: { color: colors.red },
   section: { fontWeight: '900', color: colors.ink, fontSize: 16, marginTop: 8 },
@@ -110,4 +110,4 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
   city: { fontSize: 16, fontWeight: '700', color: colors.ink },
   country: { color: colors.muted, fontSize: 13 },
-});
+}));

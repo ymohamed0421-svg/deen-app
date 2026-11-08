@@ -36,7 +36,11 @@ export type Settings = {
   reciter: string;
   prayerReminders: boolean;
   myMasjids: MyMasjid[];
+  theme: ThemeChoice;
 };
+
+/** system = follow the phone's light or dark setting. */
+export type ThemeChoice = 'system' | 'light' | 'dark';
 
 const DEFAULTS: Settings = {
   level: null,
@@ -46,6 +50,7 @@ const DEFAULTS: Settings = {
   reciter: DEFAULT_RECITER,
   prayerReminders: false,
   myMasjids: [],
+  theme: 'system',
 };
 
 const KEY = 'deen-app/settings/v1';

@@ -1,13 +1,14 @@
 import { router, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DailyCard } from '../../components/DailyCard';
 import { LevelPicker } from '../../components/LevelPicker';
-import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { useSettings, type ThemeChoice } from '../../state/SettingsProvider';
+import { colors, themed } from '../../theme';
 
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
   { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, prayer times and directions', href: '/masjids' },
+  { icon: '💰', title: 'Zakat calculator', text: 'See if zakat is due on your savings and gold, and how much', href: '/zakat' },
   { icon: '🤲', title: 'Duas', text: 'Everyday duas with Arabic, transliteration and meaning', href: '/duas' },
   { icon: '📜', title: 'Stories', text: 'The Seerah and the Companions', href: '/stories' },
   { icon: '🕋', title: 'Umrah and Hajj guide', text: 'Step by step, day by day', href: '/guide' },
@@ -15,6 +16,12 @@ const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
   { icon: '🏅', title: 'Garden League', text: 'This week’s Noor and your tier', href: '/league' },
   { icon: '🛍️', title: 'Shop', text: 'Mercy Days and Oil refills', href: '/shop' },
   { icon: '📍', title: 'Location', text: 'For prayer times and the Qibla', href: '/location' },
+];
+
+const THEMES: { id: ThemeChoice; icon: string; label: string }[] = [
+  { id: 'system', icon: '📱', label: 'Same as phone' },
+  { id: 'light', icon: '☀️', label: 'Light' },
+  { id: 'dark', icon: '🌙', label: 'Dark' },
 ];
 
 export default function MoreScreen() {
@@ -37,12 +44,28 @@ export default function MoreScreen() {
         <Text style={[styles.title, { fontSize: 20, marginTop: 12 }]}>Your level</Text>
         <Text style={styles.rowText}>Lessons and questions adjust to the level you choose.</Text>
         <LevelPicker value={settings.level} onChange={(level) => update({ level })} />
+        <Text style={[styles.title, { fontSize: 20, marginTop: 12 }]}>Appearance</Text>
+        <Text style={styles.rowText}>Dark mode is easier on the eyes at night and for Fajr.</Text>
+        <View style={styles.themes}>
+          {THEMES.map((t) => (
+            <Pressable
+              key={t.id}
+              onPress={() => update({ theme: t.id })}
+              style={[styles.theme, settings.theme === t.id && styles.themeOn]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: settings.theme === t.id }}
+            >
+              <Text style={styles.icon}>{t.icon}</Text>
+              <Text style={styles.rowTitle}>{t.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
@@ -50,4 +73,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
   rowText: { color: colors.muted, marginTop: 2, lineHeight: 19 },
   chev: { fontSize: 28, color: colors.muted },
-});
+  themes: { flexDirection: 'row', gap: 8 },
+  theme: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
+  themeOn: { borderColor: colors.green, backgroundColor: colors.greenLight },
+}));

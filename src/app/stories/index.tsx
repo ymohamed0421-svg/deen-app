@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { STORY_UNITS } from '../../content/units-stories';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 export default function StoriesScreen() {
   return (
@@ -28,11 +28,11 @@ export default function StoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   unit: { fontSize: 20, fontWeight: '900', color: colors.ink, marginTop: 8 },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
   num: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   numText: { color: '#fff', fontWeight: '900' },
   title: { fontWeight: '800', fontSize: 16, color: colors.ink },
   text: { color: colors.muted, marginTop: 2, lineHeight: 19 },
-});
+}));

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { ChoiceView, FillView, MatchView, OrderView, TrueFalseView } from '../../components/exercises';
@@ -12,7 +12,7 @@ import type { Exercise } from '../../content/types';
 import { wouldFinishUnit } from '../../game/progress';
 import { MAX_OIL, type LessonRewards } from '../../game/rules';
 import { useGame } from '../../state/GameProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 type Phase = 'teach' | 'play' | 'done' | 'out-of-oil';
 
@@ -118,7 +118,7 @@ export default function LessonScreen() {
             {exercise.type === 'fill' && <FillView exercise={exercise} seed={seed} locked={result !== null} onResult={onResult} />}
           </View>
           {result !== null && (
-            <View style={[styles.feedback, { backgroundColor: result ? '#DDF1E5' : colors.redLight }]}>
+            <View style={[styles.feedback, { backgroundColor: result ? colors.greenLight : colors.redLight }]}>
               <Text style={[styles.feedbackTitle, { color: result ? colors.green : colors.red }]}>
                 {result ? correctLines[seed % correctLines.length] : wrongLines[seed % wrongLines.length]}
               </Text>
@@ -127,7 +127,7 @@ export default function LessonScreen() {
               <Button
                 title="Continue"
                 color={result ? colors.green : colors.red}
-                shadow={result ? colors.greenDark : '#9A3F2C'}
+                shadow={result ? colors.greenDark : colors.redDark}
                 onPress={onContinue}
                 style={{ marginTop: 12 }}
               />
@@ -186,7 +186,7 @@ function Reward({ label, value, icon, color }: { label: string; value: string; i
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   close: { fontSize: 22, color: colors.muted, fontWeight: '700' },
@@ -209,4 +209,4 @@ const styles = StyleSheet.create({
   rewardLabel: { color: '#fff', fontWeight: '800', fontSize: 12, alignSelf: 'stretch', textAlign: 'center', paddingVertical: 4 },
   rewardValue: { fontSize: 20, fontWeight: '900', color: colors.ink, paddingVertical: 10 },
   doneLine: { fontSize: 16, color: colors.ink, marginTop: 12, textAlign: 'center', lineHeight: 22 },
-});
+}));

@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
-import { colors } from '../theme';
+import { Pressable, Text, type ViewStyle } from 'react-native';
+import { colors, themed } from '../theme';
 
 type Props = {
   title: string;
@@ -23,7 +23,7 @@ export function Button({ title, onPress, disabled, color = colors.green, shadow 
         styles.base,
         outline
           ? { backgroundColor: colors.card, borderColor: colors.line, borderWidth: 2, borderBottomWidth: 4 }
-          : { backgroundColor: disabled ? colors.locked : color, borderBottomColor: disabled ? '#BDB6A8' : shadow, borderBottomWidth: 4 },
+          : { backgroundColor: disabled ? colors.locked : color, borderBottomColor: disabled ? colors.lockedDark : shadow, borderBottomWidth: 4 },
         pressed && !disabled && { transform: [{ translateY: 2 }], borderBottomWidth: 2 },
         style,
       ]}
@@ -33,7 +33,7 @@ export function Button({ title, onPress, disabled, color = colors.green, shadow 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   base: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18, alignItems: 'center' },
   text: { fontSize: 16, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
-});
+}));
