@@ -1,4 +1,3 @@
-import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -7,7 +6,8 @@ import { Button } from '../../components/Button';
 import { PrayerTracker } from '../../components/PrayerTracker';
 import { CALC_METHODS, PRAYER_LABELS, formatCountdown, formatTime, nextPrayer, prayerTimes, qiblaBearing } from '../../lib/prayer';
 import { requestReminderPermission } from '../../lib/reminders';
-import { nearestCityName } from '../../lib/useLocation';
+import { QiblaCompass } from '../../components/QiblaCompass';
+import { isCoordinateName, placeName } from '../../lib/useLocation';
 import { useSettings } from '../../state/SettingsProvider';
 import { colors } from '../../theme';
 
@@ -24,6 +24,20 @@ export default function PrayerScreen() {
   }, []);
 
   const loc = settings.location;
+
+  // Locations saved before town lookup existed show numbers or "Near …"; look up the real town once.
+  useEffect(() => {
+    if (!loc || !isCoordinateName(loc.name)) return;
+    let alive = true;
+    placeName(loc.latitude, loc.longitude)
+      .then((name) => {
+        if (alive && name && !name.startsWith('Near ')) update({ location: { ...loc, name } });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loc?.latitude, loc?.longitude, loc?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!loc) {
     return (
@@ -58,7 +72,7 @@ export default function PrayerScreen() {
         <Text style={styles.title}>Prayer times</Text>
 
         <Pressable onPress={() => router.push('/location')} style={styles.locRow}>
-          <Text style={styles.locText}>📍 {/^-?\d/.test(loc.name) ? nearestCityName(loc.latitude, loc.longitude) ?? loc.name : loc.name}</Text>
+          <Text style={styles.locText}>📍 {loc.name}</Text>
           <Text style={styles.change}>Change</Text>
         </Pressable>
 
@@ -102,7 +116,7 @@ export default function PrayerScreen() {
           </View>
         )}
 
-        <Qibla bearing={qiblaBearing(loc)} />
+        <QiblaCompass bearing={qiblaBearing(loc)} latitude={loc.latitude} longitude={loc.longitude} />
 
         <View style={styles.card}>
           <Text style={styles.settingTitle}>Asr time</Text>
@@ -142,44 +156,6 @@ export default function PrayerScreen() {
   );
 }
 
-/** A compass needle pointing to the Ka‘bah, using the phone's heading where available. */
-function Qibla({ bearing }: { bearing: number }) {
-  const [heading, setHeading] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    let sub: Location.LocationSubscription | null = null;
-    (async () => {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm.granted) return;
-      sub = await Location.watchHeadingAsync((h) => setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading));
-    })().catch(() => {});
-    return () => sub?.remove();
-  }, []);
-
-  const rotation = bearing - (heading ?? 0);
-  const facing = heading !== null && Math.abs(((rotation + 540) % 360) - 180) < 5;
-
-  return (
-    <View style={[styles.card, { alignItems: 'center' }]}>
-      <Text style={styles.settingTitle}>Qibla</Text>
-      <View style={[styles.dial, facing && { borderColor: colors.green }]}>
-        <View style={[styles.needleWrap, { transform: [{ rotate: `${-(heading ?? 0)}deg` }] }]}>
-          <Text style={styles.north}>N</Text>
-        </View>
-        <View style={[styles.needleWrap, { transform: [{ rotate: `${rotation}deg` }] }]}>
-          <Text style={styles.kaaba}>🕋</Text>
-          <View style={[styles.needle, facing && { backgroundColor: colors.green }]} />
-        </View>
-      </View>
-      <Text style={styles.text}>
-        {Math.round(bearing)}° from north.{' '}
-        {heading === null ? 'On a phone, hold it flat to use the live compass.' : facing ? 'You are facing the Qibla.' : 'Turn until the Ka‘bah is at the top.'}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
@@ -204,10 +180,5 @@ const styles = StyleSheet.create({
   segOn: { backgroundColor: colors.green, borderColor: colors.green },
   segText: { fontWeight: '700', color: colors.ink, fontSize: 13, textAlign: 'center' },
   methodRow: { paddingVertical: 8 },
-  dial: { width: 200, height: 200, borderRadius: 100, borderWidth: 4, borderColor: colors.line, marginVertical: 16, alignItems: 'center', justifyContent: 'center' },
-  north: { marginTop: 4, fontWeight: '900', color: colors.red },
-  needleWrap: { position: 'absolute', width: 200, height: 200, alignItems: 'center' },
-  kaaba: { fontSize: 28, marginTop: 14 },
-  needle: { width: 6, height: 60, borderRadius: 3, backgroundColor: colors.gold },
   footnote: { color: colors.muted, fontSize: 12, textAlign: 'center' },
 });

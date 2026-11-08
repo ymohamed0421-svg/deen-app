@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ReminderSync } from '../components/ReminderSync';
+import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider } from '../state/SettingsProvider';
@@ -41,8 +42,10 @@ export default function RootLayout() {
             <Stack.Screen name="dhikr" options={{ headerShown: true, title: 'Dhikr' }} />
             <Stack.Screen name="calendar" options={{ headerShown: true, title: 'Islamic calendar' }} />
             <Stack.Screen name="ramadan" options={{ headerShown: true, title: 'Ramadan' }} />
+            <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
           </Stack>
+          <TravelCheck />
           </RecitationProvider>
           </WorshipProvider>
         </GameProvider>

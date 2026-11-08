@@ -26,7 +26,7 @@ type GameContextValue = {
   finishLesson: (outcome: LessonOutcome) => LessonRewards;
   loseOil: (foundation: boolean) => void;
   purchase: (item: ShopItem) => boolean;
-  /** Noor from prayer and dhikr. `streak` keeps today's streak alive, like a lesson does. */
+  /** Noor earned outside lessons: prayer, dhikr, masjid check-ins. `streak` keeps today's streak alive, like a lesson does. */
   earnNoor: (noor: number, streak?: boolean) => { streakExtended: boolean; streak: number; milestone: number | null };
   reset: () => void;
 };
