@@ -43,19 +43,34 @@ export function isTomTomMasjid(r: TomTomResult) {
   return /mosque|islam/i.test(labels) || MASJID_NAME.test(name);
 }
 
+/**
+ * For a name the person typed in: also keep places TomTom files as worship, religious or
+ * community centres (some masjids are listed that way), as long as nothing says another faith.
+ */
+export function isSearchMatch(r: TomTomResult) {
+  if (isTomTomMasjid(r)) return true;
+  const name = r.poi?.name ?? '';
+  const labels = [
+    ...(r.poi?.categories ?? []),
+    ...(r.poi?.classifications ?? []).flatMap((c) => [c.code ?? '', ...(c.names ?? []).map((n) => n.name ?? '')]),
+  ].join(' ');
+  if (OTHER_FAITH.test(name) || OTHER_FAITH.test(labels)) return false;
+  return /worship|religio|community|cultural/i.test(labels);
+}
+
 function cleanUrl(url: string | undefined) {
   if (!url) return null;
   const u = url.trim();
   return /^https?:\/\//i.test(u) ? u : `https://${u}`;
 }
 
-export function parseTomTom(json: { results?: TomTomResult[] }): PlaceMasjid[] {
+export function parseTomTom(json: { results?: TomTomResult[] }, keep: (r: TomTomResult) => boolean = isTomTomMasjid): PlaceMasjid[] {
   const out: PlaceMasjid[] = [];
   for (const r of json.results ?? []) {
     const lat = r.position?.lat;
     const lon = r.position?.lon;
     const name = r.poi?.name?.trim();
-    if (lat == null || lon == null || !name || !r.id || !isTomTomMasjid(r)) continue;
+    if (lat == null || lon == null || !name || !r.id || !keep(r)) continue;
     if (out.some((o) => o.id === `tt/${r.id}`)) continue;
     out.push({
       id: `tt/${r.id.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 60)}`,
@@ -73,4 +88,24 @@ export function parseTomTom(json: { results?: TomTomResult[] }): PlaceMasjid[] {
 /** Rounds to about 1 km so nearby people share one saved search. */
 export function areaKey(latitude: number, longitude: number) {
   return `v2:${latitude.toFixed(2)},${longitude.toFixed(2)}`; // v2: stricter filter, ignore older saved searches
+}
+
+/** Saved-search key for a typed name, near a ~10 km area (results are biased to where you are). */
+export function searchKey(query: string, latitude: number, longitude: number) {
+  const q = query.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 60);
+  return `q1:${q}@${latitude.toFixed(1)},${longitude.toFixed(1)}`;
+}
+
+/** Halal food: only places whose name or TomTom category says halal or zabiha. */
+export function isHalalPlace(r: TomTomResult) {
+  const labels = [
+    r.poi?.name ?? '',
+    ...(r.poi?.categories ?? []),
+    ...(r.poi?.classifications ?? []).flatMap((c) => (c.names ?? []).map((n) => n.name ?? '')),
+  ].join(' ');
+  return /halal|zabiha|zabihah/i.test(labels);
+}
+
+export function halalKey(latitude: number, longitude: number) {
+  return `h1:${latitude.toFixed(2)},${longitude.toFixed(2)}`;
 }

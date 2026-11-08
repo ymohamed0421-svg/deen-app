@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  addBonusNoor,
   buy,
   completeLesson,
   effectiveStreak,
@@ -25,6 +26,8 @@ type GameContextValue = {
   finishLesson: (outcome: LessonOutcome) => LessonRewards;
   loseOil: (foundation: boolean) => void;
   purchase: (item: ShopItem) => boolean;
+  /** Noor for things done outside lessons, like praying at a masjid. */
+  earnNoor: (amount: number) => void;
   reset: () => void;
 };
 
@@ -91,6 +94,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [state.wallet],
   );
 
+  const earnNoor = useCallback((amount: number) => {
+    setState((s) => addBonusNoor(s, amount, toDateKey(new Date())));
+  }, []);
+
   const reset = useCallback(() => setState(newGameState(Date.now(), toDateKey(new Date()))), []);
 
   const value = useMemo<GameContextValue>(
@@ -102,9 +109,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       finishLesson,
       loseOil,
       purchase,
+      earnNoor,
       reset,
     }),
-    [ready, state, today, finishLesson, loseOil, purchase, reset],
+    [ready, state, today, finishLesson, loseOil, purchase, earnNoor, reset],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

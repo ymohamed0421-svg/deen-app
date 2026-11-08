@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_OIL,
+  addBonusNoor,
   OIL_REFILL_MS,
   buy,
   completeLesson,
@@ -98,4 +99,12 @@ test('weekly Noor resets on a new week', () => {
 test('levels need more Noor each time', () => {
   assert.deepEqual(levelFromNoor(0), { level: 1, into: 0, needed: 100 });
   assert.deepEqual(levelFromNoor(260), { level: 3, into: 10, needed: 200 });
+});
+
+test('bonus Noor adds to total and to this week only', () => {
+  const s0 = { ...newGameState(0, '2026-11-02'), noor: 50, weeklyNoor: 20, weekStart: '2026-10-26' };
+  const s1 = addBonusNoor(s0, 15, '2026-11-04');
+  assert.equal(s1.noor, 65);
+  assert.equal(s1.weeklyNoor, 15);
+  assert.equal(s1.weekStart, '2026-11-02');
 });

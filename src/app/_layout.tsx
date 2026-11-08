@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ReminderSync } from '../components/ReminderSync';
+import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider } from '../state/SettingsProvider';
@@ -39,8 +40,10 @@ export default function RootLayout() {
             <Stack.Screen name="memorize/practice" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="course/[id]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
+            <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
           </Stack>
+          <TravelCheck />
           </RecitationProvider>
         </GameProvider>
       </SettingsProvider>
