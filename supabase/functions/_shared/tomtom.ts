@@ -24,18 +24,23 @@ type TomTomResult = {
   position?: { lat?: number; lon?: number };
 };
 
-export const MOSQUE_CATEGORY = 7339002; // TomTom: Place of Worship › Mosque
-export const WORSHIP_CATEGORY = 7339; // TomTom: Place of Worship (all)
 
 const MASJID_NAME = /masjid|mosque|islamic|musall|jamia|jame\b|muslim|ummah|\bmadina|medina|\bdar al|\bdar-al|\bdarul|\bmakkah|\bmecca/i;
-const OTHER_FAITH = /church|chapel|cathedral|parish|synagogue|temple|gurdwara|kingdom hall|baptist|methodist|lutheran|presbyterian|catholic|episcopal/i;
+export const STRONG_MUSLIM = /masjid|mosque|islamic|muslim|musall/i;
 
+export const OTHER_FAITH =
+  /church|chapel|cathedral|parish|ministr|fellowship|congregation|synagogue|jewish|hebrew|chabad|shul|temple|gurdwara|sikh|hindu|mandir|buddhis|vihara|kingdom hall|jehovah|baptist|methodist|lutheran|presbyterian|catholic|episcopal|orthodox|adventist|pentecostal|evangel|christ|gospel|bible|mormon|latter[- ]day|unitarian|quaker|bah[aá]'?i/i;
+
+/** Only places that are clearly Muslim: TomTom files them as mosques, or the name says so. */
 export function isTomTomMasjid(r: TomTomResult) {
   const name = r.poi?.name ?? '';
-  const cats = (r.poi?.categories ?? []).join(' ');
-  if (r.poi?.categorySet?.some((c) => c.id === MOSQUE_CATEGORY) || /mosque/i.test(cats)) return true;
-  if (OTHER_FAITH.test(name)) return false;
-  return MASJID_NAME.test(name);
+  const labels = [
+    ...(r.poi?.categories ?? []),
+    ...(r.poi?.classifications ?? []).flatMap((c) => [c.code ?? '', ...(c.names ?? []).map((n) => n.name ?? '')]),
+  ].join(' ');
+  if (STRONG_MUSLIM.test(name)) return true; // e.g. "Temple Hills Mosque"
+  if (OTHER_FAITH.test(name) || OTHER_FAITH.test(labels)) return false;
+  return /mosque|islam/i.test(labels) || MASJID_NAME.test(name);
 }
 
 function cleanUrl(url: string | undefined) {
@@ -67,5 +72,5 @@ export function parseTomTom(json: { results?: TomTomResult[] }): PlaceMasjid[] {
 
 /** Rounds to about 1 km so nearby people share one saved search. */
 export function areaKey(latitude: number, longitude: number) {
-  return `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  return `v2:${latitude.toFixed(2)},${longitude.toFixed(2)}`; // v2: stricter filter, ignore older saved searches
 }

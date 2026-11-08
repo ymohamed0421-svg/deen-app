@@ -1,3 +1,4 @@
+import { OTHER_FAITH, STRONG_MUSLIM } from '../../supabase/functions/_shared/tomtom.ts';
 // Nearby masjids from OpenStreetMap, through the free Overpass API. No key, no cost.
 // OpenStreetMap rarely has a masjid's iqamah schedule, so the app shows prayer start
 // times calculated for the masjid's spot and links to the masjid's own website or phone.
@@ -47,8 +48,10 @@ const MASJID_NAME = /masjid|mosque|islamic|musall|jamia|jame\b|muslim|ummah|\bma
 
 /** True for elements that look like a masjid, even when the map lacks religion=muslim. */
 export function isMasjid(t: Record<string, string>) {
-  if (t.religion === 'muslim' || t.building === 'mosque') return true;
   if (t.religion && t.religion !== 'muslim') return false;
+  const names = `${t.name ?? ''} ${t['name:en'] ?? ''}`;
+  if (OTHER_FAITH.test(names) && !STRONG_MUSLIM.test(names) && t.religion !== 'muslim') return false;
+  if (t.religion === 'muslim' || t.building === 'mosque') return true;
   return MASJID_NAME.test(`${t.name ?? ''} ${t['name:en'] ?? ''} ${t.official_name ?? ''}`);
 }
 
@@ -156,7 +159,7 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(
 
 /** Adds masjids from a second source that the first doesn't already have, nearest first. */
 export function mergeMasjids(primary: Masjid[], extra: Masjid[]) {
-  const out = [...primary];
+  const out = primary.filter((m) => STRONG_MUSLIM.test(m.name) || !OTHER_FAITH.test(m.name));
   for (const m of extra) {
     const dup = out.some((o) => {
       const km = distanceKm(o.latitude, o.longitude, m.latitude, m.longitude);

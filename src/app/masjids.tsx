@@ -18,7 +18,7 @@ type State =
   | { kind: 'error'; origin: Origin }
   | { kind: 'done'; origin: Origin; masjids: Masjid[]; stale?: boolean };
 
-const CACHE_KEY = 'deen-app/masjids/last/v1';
+const CACHE_KEY = 'deen-app/masjids/last/v2';
 type Cached = { latitude: number; longitude: number; masjids: Masjid[] };
 
 function within<T>(ms: number, p: Promise<T>): Promise<T | null> {
