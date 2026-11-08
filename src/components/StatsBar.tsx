@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { MAX_OIL } from '../game/rules';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export function StatsBar() {
   const { state, displayStreak } = useGame();
@@ -24,7 +24,7 @@ function Stat({ icon, value, label, color }: { icon: string; value: number | str
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -37,4 +37,4 @@ const styles = StyleSheet.create({
   stat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   icon: { fontSize: 18 },
   value: { fontSize: 16, fontWeight: '800' },
-});
+}));

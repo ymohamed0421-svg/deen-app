@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble } from '../components/Fanous';
 import { StatsBar } from '../components/StatsBar';
 import { levelFromNoor } from '../game/rules';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const PLANTS = ['🌱', '🌿', '🌷', '🌼', '🌻', '🪴', '🌳', '🌴'];
 
@@ -60,7 +60,7 @@ export default function GardenScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
   fill: { height: '100%', backgroundColor: colors.green, borderRadius: 7 },
   levelSub: { color: colors.muted, marginTop: 6, fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20, justifyContent: 'center' },
-  plot: { width: 72, height: 72, borderRadius: 14, backgroundColor: '#EADFC8', alignItems: 'center', justifyContent: 'center' },
-  plotGrown: { backgroundColor: '#D6E8C9' },
+  plot: { width: 72, height: 72, borderRadius: 14, backgroundColor: colors.soil, alignItems: 'center', justifyContent: 'center' },
+  plotGrown: { backgroundColor: colors.sprout },
   plant: { fontSize: 36 },
   fanousRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 24 },
-});
+}));

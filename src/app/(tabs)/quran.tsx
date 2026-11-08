@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SURAHS } from '../../quran/surahs';
 import { useRecitation } from '../../state/RecitationProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 export default function QuranScreen() {
   const [query, setQuery] = useState('');
@@ -64,7 +64,7 @@ export default function QuranScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   now: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 14, backgroundColor: colors.green },
   nowLabel: { color: '#ffffffcc', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   nowName: { color: '#fff', fontWeight: '800', fontSize: 16 },
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
   num: { width: 38, height: 38, borderRadius: 10, backgroundColor: colors.goldLight, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] },
-  numText: { fontWeight: '800', color: '#9A6B12', transform: [{ rotate: '-45deg' }] },
+  numText: { fontWeight: '800', color: colors.goldInk, transform: [{ rotate: '-45deg' }] },
   name: { fontWeight: '800', fontSize: 16, color: colors.ink },
   meta: { color: colors.muted, fontSize: 13, marginTop: 2 },
   arabic: { fontSize: 22, color: colors.green },
-});
+}));

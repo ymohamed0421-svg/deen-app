@@ -56,7 +56,11 @@ export type Settings = {
   favoriteTimes: FavoriteTimes | null;
   iqamahReminders: boolean;
   iqamahLeadMinutes: number;
+  theme: ThemeChoice;
 };
+
+/** system = follow the phone's light or dark setting. */
+export type ThemeChoice = 'system' | 'light' | 'dark';
 
 const DEFAULTS: Settings = {
   level: null,
@@ -70,6 +74,7 @@ const DEFAULTS: Settings = {
   favoriteTimes: null,
   iqamahReminders: false,
   iqamahLeadMinutes: 15,
+  theme: 'system',
 };
 
 const KEY = 'deen-app/settings/v1';

@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble } from '../components/Fanous';
 import { StatsBar } from '../components/StatsBar';
 import { LEAGUE_TIERS } from '../game/rules';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const TIER_ICONS = ['🌰', '🌱', '🌿', '🌴', '🫒', '🌲'];
 
@@ -50,14 +50,14 @@ export default function LeagueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
   sub: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
   tier: { width: '31%', alignItems: 'center', padding: 10, borderRadius: 14, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line },
-  tierActive: { borderColor: colors.green, backgroundColor: '#EEF8F2' },
+  tierActive: { borderColor: colors.green, backgroundColor: colors.greenLight },
   tierIcon: { fontSize: 28 },
   tierName: { fontWeight: '800', color: colors.ink, marginTop: 4 },
   card: { marginTop: 16, padding: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line },
@@ -65,4 +65,4 @@ const styles = StyleSheet.create({
   big: { fontSize: 28, fontWeight: '900', color: colors.green, marginTop: 6 },
   cardText: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   fanousRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 24 },
-});
+}));

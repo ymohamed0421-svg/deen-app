@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { StatsBar } from '../components/StatsBar';
 import { MAX_MERCY_DAYS, MAX_OIL, PRICES, canBuy, msUntilNextDrop, type ShopItem } from '../game/rules';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export default function ShopScreen() {
   const { state, purchase } = useGame();
@@ -58,7 +58,7 @@ export default function ShopScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
@@ -79,4 +79,4 @@ const styles = StyleSheet.create({
   cardText: { color: colors.muted, marginTop: 2, lineHeight: 19 },
   status: { color: colors.ink, marginTop: 6, fontWeight: '700', fontSize: 13 },
   note: { color: colors.muted, marginTop: 20, fontSize: 13, textAlign: 'center' },
-});
+}));

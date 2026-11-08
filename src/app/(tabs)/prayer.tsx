@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { CALC_METHODS, PRAYER_LABELS, formatCountdown, formatTime, nextPrayer, prayerTimes, qiblaBearing } from '../../lib/prayer';
@@ -8,7 +8,7 @@ import { requestReminderPermission } from '../../lib/reminders';
 import { QiblaCompass } from '../../components/QiblaCompass';
 import { isCoordinateName, placeName } from '../../lib/useLocation';
 import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 const ROWS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
@@ -152,7 +152,7 @@ export default function PrayerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
   text: { color: colors.ink, fontSize: 15, lineHeight: 21, textAlign: 'center' },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   nextTime: { color: '#fff', fontSize: 16, marginTop: 2 },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 16 },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10 },
-  timeRowNext: { backgroundColor: '#EEF8F2' },
+  timeRowNext: { backgroundColor: colors.greenLight },
   timeName: { fontSize: 17, fontWeight: '700', color: colors.ink },
   timeValue: { fontSize: 17, fontWeight: '800', color: colors.ink },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -177,4 +177,4 @@ const styles = StyleSheet.create({
   segText: { fontWeight: '700', color: colors.ink, fontSize: 13, textAlign: 'center' },
   methodRow: { paddingVertical: 8 },
   footnote: { color: colors.muted, fontSize: 12, textAlign: 'center' },
-});
+}));
