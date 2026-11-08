@@ -151,3 +151,18 @@ export function formatDistance(km: number, locale = Intl.DateTimeFormat().resolv
   const unit = miles ? 'mi' : 'km';
   return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${unit}`;
 }
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\b(the|of|and|inc|center|centre|masjid|mosque|islamic)\b/g, '').trim();
+
+/** Adds masjids from a second source that the first doesn't already have, nearest first. */
+export function mergeMasjids(primary: Masjid[], extra: Masjid[]) {
+  const out = [...primary];
+  for (const m of extra) {
+    const dup = out.some((o) => {
+      const km = distanceKm(o.latitude, o.longitude, m.latitude, m.longitude);
+      return km < 0.2 || (km < 1.5 && norm(o.name) !== '' && norm(o.name) === norm(m.name));
+    });
+    if (!dup) out.push(m);
+  }
+  return out.sort((a, b) => a.km - b.km);
+}
