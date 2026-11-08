@@ -30,18 +30,26 @@ const ENDPOINTS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
-export function buildQuery(latitude: number, longitude: number, radiusMeters: number) {
+/**
+ * Close by, fetch every place of worship and community centre (fast: indexed tags) and pick masjids
+ * out of them here, because many masjids are mapped without religion=muslim. Farther out, only
+ * ask for ones tagged as Muslim, so the reply stays small.
+ */
+export function buildQuery(latitude: number, longitude: number, radiusMeters: number, broad = true) {
   const around = `(around:${Math.round(radiusMeters)},${latitude.toFixed(5)},${longitude.toFixed(5)})`;
-  // Many masjids are mapped without religion=muslim, or as a community centre, so also match by name.
-  const named = '["name"~"masjid|mosque|islamic cent|islamic soc|musall|jamia|jame|muslim community",i]';
-  return (
-    `[out:json][timeout:25];(` +
-    `nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};` +
-    `nwr["building"="mosque"]${around};` +
-    `nwr${named}["amenity"~"place_of_worship|community_centre|social_centre"]${around};` +
-    `nwr${named}["building"]${around};` +
-    `);out center tags 120;`
-  );
+  const parts = broad
+    ? [`nwr["amenity"="place_of_worship"]${around};`, `nwr["amenity"="community_centre"]${around};`, `nwr["building"="mosque"]${around};`]
+    : [`nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};`, `nwr["building"="mosque"]${around};`];
+  return `[out:json][timeout:25];(${parts.join('')});out center tags;`;
+}
+
+const MASJID_NAME = /masjid|mosque|islamic|musall|jamia|jame\b|muslim|ummah|\bmadina|medina|\bdar al|\bdar-al|\bdarul|\bmakkah|\bmecca/i;
+
+/** True for elements that look like a masjid, even when the map lacks religion=muslim. */
+export function isMasjid(t: Record<string, string>) {
+  if (t.religion === 'muslim' || t.building === 'mosque') return true;
+  if (t.religion && t.religion !== 'muslim') return false;
+  return MASJID_NAME.test(`${t.name ?? ''} ${t['name:en'] ?? ''} ${t.official_name ?? ''}`);
 }
 
 export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
@@ -71,7 +79,7 @@ export function parseOverpass(json: { elements?: OsmElement[] }, latitude: numbe
     const lat = el.lat ?? el.center?.lat;
     const lon = el.lon ?? el.center?.lon;
     const t = el.tags ?? {};
-    if (lat == null || lon == null) continue;
+    if (lat == null || lon == null || !isMasjid(t)) continue;
     const name = t['name:en'] || t.name || t['official_name'];
     if (!name) continue;
     out.push({
@@ -91,10 +99,10 @@ export function parseOverpass(json: { elements?: OsmElement[] }, latitude: numbe
   return out.filter((m, i) => !out.slice(0, i).some((o) => o.name === m.name && distanceKm(o.latitude, o.longitude, m.latitude, m.longitude) < 0.15));
 }
 
-/** Asks every Overpass server at once and takes the first good answer, giving up after 20 seconds. */
+/** Asks every Overpass server at once and takes the first good answer, giving up after 25 seconds. */
 async function query(q: string) {
   const controllers = ENDPOINTS.map(() => new AbortController());
-  const timer = setTimeout(() => controllers.forEach((c) => c.abort()), 20_000);
+  const timer = setTimeout(() => controllers.forEach((c) => c.abort()), 25_000);
   try {
     return await Promise.any(
       ENDPOINTS.map(async (base, i) => {
@@ -114,9 +122,11 @@ async function query(q: string) {
 /** The nearest masjids, widening the search from 10 km to 40 km when there are few close by. */
 export async function findNearbyMasjids(latitude: number, longitude: number, limit = 25) {
   let found: Masjid[] = [];
-  for (const radius of [10_000, 40_000]) {
+  for (const [radius, broad] of [[10_000, true], [40_000, false]] as const) {
     try {
-      found = parseOverpass(await query(buildQuery(latitude, longitude, radius)), latitude, longitude);
+      const wider = parseOverpass(await query(buildQuery(latitude, longitude, radius, broad)), latitude, longitude);
+      const seen = new Set(found.map((m) => m.id));
+      found = [...found, ...wider.filter((m) => !seen.has(m.id))].sort((a, b) => a.km - b.km);
     } catch (e) {
       if (found.length === 0) throw e; // keep the closer results if only the wider search fails
       break;
