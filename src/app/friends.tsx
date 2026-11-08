@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Fanous, SpeechBubble } from '../components/Fanous';
@@ -19,7 +19,7 @@ import {
 } from '../lib/friendsLogic';
 import { supabase } from '../lib/supabase';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 function confirm(title: string, message: string, ok: string): Promise<boolean> {
   if (Platform.OS === 'web') return Promise.resolve(window.confirm(`${title}\n\n${message}`));
@@ -288,7 +288,7 @@ export default function FriendsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 16, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
@@ -297,9 +297,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: '900', fontSize: 17, color: colors.ink },
   cardText: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   small: { color: colors.muted, fontSize: 12, marginTop: 6 },
-  link: { color: colors.green, fontWeight: '800' },
+  link: { color: colors.greenInk, fontWeight: '800' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  code: { fontSize: 36, fontWeight: '900', color: colors.green, letterSpacing: 4, marginTop: 8, textAlign: 'center' },
+  code: { fontSize: 36, fontWeight: '900', color: colors.greenInk, letterSpacing: 4, marginTop: 8, textAlign: 'center' },
   input: {
     marginTop: 10,
     borderWidth: 2,
@@ -315,12 +315,12 @@ const styles = StyleSheet.create({
   notice: { marginTop: 14, padding: 14, borderRadius: 14, backgroundColor: colors.goldLight, borderWidth: 2, borderColor: colors.gold },
   noticeText: { color: colors.ink, fontWeight: '700', lineHeight: 20 },
   friendName: { flex: 1, fontWeight: '900', fontSize: 18, color: colors.ink },
-  streak: { fontSize: 18, fontWeight: '900', color: colors.gold },
-  buddy: { color: colors.green, fontWeight: '800', marginTop: 6 },
+  streak: { fontSize: 18, fontWeight: '900', color: colors.goldInk },
+  buddy: { color: colors.greenInk, fontWeight: '800', marginTop: 6 },
   nudges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  nudge: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#EEF8F2', borderWidth: 2, borderColor: colors.green },
+  nudge: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.greenLight, borderWidth: 2, borderColor: colors.green },
   nudgeSent: { backgroundColor: colors.bg, borderColor: colors.line },
-  nudgeText: { fontWeight: '800', color: colors.greenDark },
+  nudgeText: { fontWeight: '800', color: colors.greenInk },
   remove: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   fanousRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 24 },
-});
+}));

@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  addBonusNoor,
   buy,
   completeLesson,
   effectiveStreak,
@@ -15,6 +14,7 @@ import {
   type ShopItem,
 } from '../game/rules';
 import { syncLessonCompletion } from '../lib/sync';
+import { awardWorship } from '../lib/worship';
 
 const STORAGE_KEY = 'deen-app/game-state/v1';
 
@@ -26,8 +26,8 @@ type GameContextValue = {
   finishLesson: (outcome: LessonOutcome) => LessonRewards;
   loseOil: (foundation: boolean) => void;
   purchase: (item: ShopItem) => boolean;
-  /** Noor for things done outside lessons, like praying at a masjid. */
-  earnNoor: (amount: number) => void;
+  /** Noor earned outside lessons: prayer, dhikr, masjid check-ins. `streak` keeps today's streak alive, like a lesson does. */
+  earnNoor: (noor: number, streak?: boolean) => { streakExtended: boolean; streak: number; milestone: number | null };
   reset: () => void;
 };
 
@@ -94,8 +94,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [state.wallet],
   );
 
-  const earnNoor = useCallback((amount: number) => {
-    setState((s) => addBonusNoor(s, amount, toDateKey(new Date())));
+  const earnNoor = useCallback((noor: number, streak = false) => {
+    const result = awardWorship(stateRef.current, noor, toDateKey(new Date()), streak);
+    stateRef.current = result.state;
+    setState(result.state);
+    return { streakExtended: result.streakExtended, streak: result.streak, milestone: result.milestone };
   }, []);
 
   const reset = useCallback(() => setState(newGameState(Date.now(), toDateKey(new Date()))), []);

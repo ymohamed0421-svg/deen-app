@@ -4,7 +4,7 @@ import { magvar } from 'magvar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { distanceKm } from '../lib/geocode';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 import { Button } from './Button';
 
 const KAABA = { latitude: 21.4225, longitude: 39.8262 };
@@ -173,7 +173,7 @@ export function QiblaCompass({ bearing, latitude, longitude }: Props) {
 
       {/* The fixed arrow is where the top of the phone points. */}
       <View style={[styles.arrow, { borderBottomColor: facing ? colors.green : colors.gold }]} />
-      <View style={[styles.dial, { width: size, height: size, borderRadius: size / 2 }, facing && { borderColor: colors.green, backgroundColor: '#EEF8F2' }]}>
+      <View style={[styles.dial, { width: size, height: size, borderRadius: size / 2 }, facing && { borderColor: colors.green, backgroundColor: colors.greenLight }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: live ? spin : '0deg' }] }]}>
           {ticks.map((deg) => {
             const major = deg % 30 === 0;
@@ -220,7 +220,7 @@ export function QiblaCompass({ bearing, latitude, longitude }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 16, alignItems: 'center' },
   cardFacing: { borderColor: colors.green },
   titleRow: { alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
   },
-  dial: { marginTop: 4, borderWidth: 4, borderColor: colors.line, backgroundColor: '#FFFDF8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  dial: { marginTop: 4, borderWidth: 4, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center' },
   tick: { width: 2, height: 6, marginTop: 4, backgroundColor: colors.locked, borderRadius: 1 },
   tickMajor: { width: 3, height: 12, backgroundColor: colors.muted },
@@ -253,4 +253,4 @@ const styles = StyleSheet.create({
   factLabel: { color: colors.muted, fontSize: 12, marginTop: 2, textAlign: 'center' },
   calibrate: { color: colors.oil, fontWeight: '700', textAlign: 'center', marginTop: 12 },
   tip: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 12, lineHeight: 17 },
-});
+}));

@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { shareStatus, takeNudges, type IncomingNudge } from '../lib/friends';
 import { nudgeNotification } from '../lib/friendsLogic';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const POLL_MS = 2 * 60_000;
 
@@ -89,7 +89,7 @@ export function FriendSync() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   wrap: { position: 'absolute', left: 12, right: 12, zIndex: 1000, alignItems: 'center' },
   banner: {
     width: '100%',
@@ -113,4 +113,4 @@ const styles = StyleSheet.create({
   body: { color: colors.ink, marginTop: 2, lineHeight: 19 },
   more: { color: colors.muted, marginTop: 4, fontSize: 12, fontWeight: '700' },
   close: { fontSize: 18, color: colors.muted, fontWeight: '900' },
-});
+}));

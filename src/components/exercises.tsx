@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { ChoiceExercise, FillExercise, MatchExercise, OrderExercise, TrueFalseExercise } from '../content/types';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 import { Button } from './Button';
 
 function shuffle<T>(items: T[], seed: number): T[] {
@@ -205,7 +205,7 @@ export function MatchView({ exercise, seed, locked, onResult }: Props<MatchExerc
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   fill: { flex: 1 },
   kicker: { fontWeight: '900', color: colors.muted, letterSpacing: 1, fontSize: 12, marginBottom: 10 },
   statement: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.line, borderRadius: 16, padding: 18, marginBottom: 20 },
@@ -224,10 +224,10 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: colors.card,
   },
-  optionSelected: { borderColor: colors.blue, backgroundColor: '#E6F0F8' },
+  optionSelected: { borderColor: colors.blue, backgroundColor: colors.blueLight },
   optionText: { fontSize: 16, color: colors.ink, fontWeight: '600' },
   matchCell: { minHeight: 56, justifyContent: 'center' },
-  matchDone: { borderColor: '#BFE0CF', backgroundColor: '#EEF8F2' },
+  matchDone: { borderColor: colors.greenBorder, backgroundColor: colors.greenLight },
   matchWrong: { borderColor: colors.red, backgroundColor: colors.redLight },
   answerArea: {
     minHeight: 90,
@@ -253,4 +253,4 @@ const styles = StyleSheet.create({
   },
   chipGhost: { backgroundColor: colors.line, borderColor: colors.line },
   chipText: { fontSize: 15, color: colors.ink, fontWeight: '600' },
-});
+}));

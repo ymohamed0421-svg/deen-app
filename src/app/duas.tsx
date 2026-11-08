@@ -1,6 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { DUAS } from '../content/daily';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export default function DuasScreen() {
   const categories = [...new Set(DUAS.map((d) => d.category))];
@@ -24,7 +24,7 @@ export default function DuasScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   category: { fontSize: 20, fontWeight: '900', color: colors.ink, marginTop: 8 },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 16 },
   title: { fontWeight: '800', fontSize: 16, color: colors.ink },
@@ -32,4 +32,4 @@ const styles = StyleSheet.create({
   translit: { color: colors.green, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
   english: { color: colors.ink, marginTop: 6, lineHeight: 22, fontSize: 15 },
   ref: { color: colors.muted, fontSize: 12, marginTop: 8 },
-});
+}));

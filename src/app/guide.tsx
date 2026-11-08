@@ -1,7 +1,7 @@
 // Umrah and Hajj guide. FIRST DRAFT: must be checked by a qualified scholar before release.
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { colors, themed } from '../theme';
 
 type Step = { title: string; text: string; when?: string };
 
@@ -94,12 +94,12 @@ export default function GuideScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   segment: { flexDirection: 'row', gap: 8 },
   segBtn: { flex: 1, padding: 12, borderRadius: 12, borderWidth: 2, borderColor: colors.line, alignItems: 'center', backgroundColor: colors.card },
   segOn: { backgroundColor: colors.green, borderColor: colors.green },
   segText: { fontWeight: '900', color: colors.ink },
-  card: { backgroundColor: colors.goldLight, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: '#F1D9A0' },
+  card: { backgroundColor: colors.goldLight, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: colors.goldBorder },
   arabic: { fontSize: 22, lineHeight: 40, textAlign: 'right', color: colors.ink, marginTop: 6, writingDirection: 'rtl' },
   translit: { color: colors.green, fontStyle: 'italic', marginTop: 6, lineHeight: 21 },
   step: { flexDirection: 'row', gap: 12, backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.line, padding: 14 },
@@ -109,4 +109,4 @@ const styles = StyleSheet.create({
   stepTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
   text: { color: colors.ink, lineHeight: 22, marginTop: 4, fontSize: 15 },
   ref: { color: colors.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
-});
+}));

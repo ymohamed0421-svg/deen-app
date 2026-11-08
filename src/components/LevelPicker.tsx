@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { KnowledgeLevel } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 const LEVELS: { id: KnowledgeLevel; icon: string; title: string; text: string }[] = [
   { id: 'beginner', icon: '🌱', title: 'Beginner', text: 'I’m new to Islam or want to start from the basics: the pillars, wudu and how to pray.' },
@@ -30,7 +30,7 @@ export function LevelPicker({ value, onChange }: { value: KnowledgeLevel | null;
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderColor: colors.line,
   },
-  optionSelected: { borderColor: colors.green, backgroundColor: '#EEF8F2' },
+  optionSelected: { borderColor: colors.green, backgroundColor: colors.greenLight },
   icon: { fontSize: 34 },
   title: { fontSize: 18, fontWeight: '900', color: colors.ink },
   text: { color: colors.muted, marginTop: 2, lineHeight: 20 },
-});
+}));

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { CHECKIN_KM, CHECKIN_NOOR, checkIn, checkedIn } from '../lib/checkins';
 import { prayerSlot, sortByJumuah } from '../lib/clock';
@@ -13,7 +13,7 @@ import { distanceKm, findNearbyMasjids, formatDistance, mergeMasjids, mapLinks, 
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useGame } from '../state/GameProvider';
 import { useSettings, type FavoriteMasjid, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 type Origin = { latitude: number; longitude: number; fromGps: boolean };
 type State =
@@ -405,7 +405,7 @@ function FixTimes({ masjid: m, start, onDone }: { masjid: { id: string; name: st
       </View>
       <TextInput value={jumuah} onChangeText={setJumuah} placeholder={JUMUAH_PLACEHOLDER} placeholderTextColor={colors.muted} style={styles.input} maxLength={80} />
       <Text style={styles.siteNote}>Only add times you know are right, like from the masjid’s board or announcements.</Text>
-      {error && <Text style={[styles.siteNote, { color: '#B42318' }]}>{error}</Text>}
+      {error && <Text style={[styles.siteNote, { color: colors.red }]}>{error}</Text>}
       <View style={styles.actions}>
         <Button title={saving ? 'Saving…' : 'Save for everyone'} onPress={save} disabled={saving} style={{ flex: 1 }} />
         <Button title="Cancel" variant="outline" onPress={() => onDone(null)} style={{ flex: 1 }} />
@@ -715,7 +715,7 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: colors.bg },
   big: { fontSize: 48 },
   text: { color: colors.ink, fontSize: 16, lineHeight: 22, textAlign: 'center' },
@@ -738,9 +738,9 @@ const styles = StyleSheet.create({
   nextText: { color: colors.ink },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 2, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  chipText: { fontWeight: '800', color: colors.greenDark },
+  chipText: { fontWeight: '800', color: colors.greenInk },
   siteRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  siteCard: { backgroundColor: '#EAF4EE', borderRadius: 14, padding: 12, gap: 8 },
+  siteCard: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 12, gap: 8 },
   siteLabel: { fontSize: 11, fontWeight: '900', color: colors.green, letterSpacing: 1 },
   siteGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
@@ -754,9 +754,9 @@ const styles = StyleSheet.create({
   fixCard: { backgroundColor: colors.bg, borderRadius: 14, padding: 12, gap: 8, borderWidth: 2, borderColor: colors.line },
   fixCell: { width: '30%', flexGrow: 1, gap: 2 },
   fixInput: { borderWidth: 2, borderColor: colors.line, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, color: colors.ink, backgroundColor: colors.card },
-  checkDone: { backgroundColor: '#EAF4EE', borderRadius: 12, padding: 10 },
+  checkDone: { backgroundColor: colors.greenLight, borderRadius: 12, padding: 10 },
   jumuahRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },
   jumuahName: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   jumuahTimes: { fontWeight: '900', color: colors.green, textAlign: 'right' },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
-});
+}));

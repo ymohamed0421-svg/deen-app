@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble, greetingLine } from '../../components/Fanous';
 import { StatsBar } from '../../components/StatsBar';
 import { UNITS } from '../../content/units';
 import { isDone, isUnlocked, nextLessonId, unitDone } from '../../game/progress';
 import { DailyCard } from '../../components/DailyCard';
+import { WorshipCard } from '../../components/WorshipCard';
 import { useGame } from '../../state/GameProvider';
 import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 // Nodes wind left and right like a garden path.
 const OFFSETS = [0, 50, 70, 40, -10, -60, -70, -40];
@@ -35,6 +36,8 @@ export default function PathScreen() {
           <QuickLink icon="🛍️" label="Shop" onPress={() => router.push('/shop')} />
         </View>
 
+        <WorshipCard />
+
         <DailyCard />
 
         {UNITS.map((unit, u) => (
@@ -60,7 +63,7 @@ export default function PathScreen() {
                     style={({ pressed }) => [
                       styles.node,
                       { backgroundColor: done ? colors.gold : open ? unit.color : colors.locked },
-                      { borderBottomColor: done ? '#B9861F' : open ? '#00000040' : '#BDB6A8' },
+                      { borderBottomColor: done ? '#B9861F' : open ? '#00000040' : colors.lockedDark },
                       current && styles.nodeCurrent,
                       pressed && { transform: [{ translateY: 3 }], borderBottomWidth: 3 },
                     ]}
@@ -100,7 +103,7 @@ function QuickLink({ icon, label, onPress }: { icon: string; label: string; onPr
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   quickRow: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 12 },
   quick: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
   quickLabel: { fontWeight: '800', color: colors.ink, marginTop: 2 },
@@ -146,4 +149,4 @@ const styles = StyleSheet.create({
   comingTitle: { fontWeight: '800', color: colors.ink, fontSize: 16 },
   comingText: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   draftNote: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 16 },
-});
+}));
