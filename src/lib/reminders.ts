@@ -1,9 +1,13 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import type { Settings } from '../state/SettingsProvider';
+import { iqamahReminders } from './clock';
 import { PRAYERS, PRAYER_LABELS, prayerTimes } from './prayer';
 
-const DAYS_AHEAD = 7; // 7 days x 5 prayers = 35, under iOS's limit of 64 scheduled notifications
+// 7 days x 5 prayers = 35, under iOS's limit of 64 scheduled notifications. With iqamah reminders
+// for a favorite masjid too, 6 days x (5 + 5) + one Jumu'ah = 61.
+const DAYS_AHEAD = 7;
+const DAYS_AHEAD_WITH_IQAMAH = 6;
 
 const LINES: Record<string, string> = {
   fajr: 'Prayer is better than sleep. Time for Fajr.',
@@ -38,7 +42,9 @@ export async function requestReminderPermission() {
 export async function schedulePrayerReminders(settings: Settings) {
   if (Platform.OS === 'web') return 0;
   await Notifications.cancelAllScheduledNotificationsAsync();
-  if (!settings.prayerReminders || !settings.location) return 0;
+  const iqamah = settings.iqamahReminders && settings.favoriteMasjid && settings.favoriteTimes ? settings.favoriteTimes : null;
+  const adhan = settings.prayerReminders && settings.location;
+  if (!adhan && !iqamah) return 0;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('prayer', {
@@ -49,17 +55,29 @@ export async function schedulePrayerReminders(settings: Settings) {
   }
 
   const now = Date.now();
+  const days = iqamah ? DAYS_AHEAD_WITH_IQAMAH : DAYS_AHEAD;
+  const at = (date: Date, title: string, body: string) =>
+    Notifications.scheduleNotificationAsync({
+      content: { title, body, sound: 'default' },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: 'prayer' },
+    });
   let count = 0;
-  for (let day = 0; day < DAYS_AHEAD; day++) {
-    const times = prayerTimes(settings.location, settings, new Date(now + day * 86_400_000));
-    for (const p of PRAYERS) {
-      const at = times[p];
-      if (at.getTime() <= now) continue;
-      await Notifications.scheduleNotificationAsync({
-        content: { title: `${PRAYER_LABELS[p]} 🕌`, body: LINES[p], sound: 'default' },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'prayer' },
-      });
-      count++;
+  for (let day = 0; day < days; day++) {
+    const date = new Date(now + day * 86_400_000);
+    if (adhan && settings.location) {
+      const times = prayerTimes(settings.location, settings, date);
+      for (const p of PRAYERS) {
+        if (times[p].getTime() <= now) continue;
+        await at(times[p], `${PRAYER_LABELS[p]} 🕌`, LINES[p]);
+        count++;
+      }
+    }
+    if (iqamah && settings.favoriteMasjid) {
+      for (const r of iqamahReminders(iqamah, date, settings.iqamahLeadMinutes, settings.favoriteMasjid.name)) {
+        if (r.at.getTime() <= now) continue;
+        await at(r.at, r.title, r.body);
+        count++;
+      }
     }
   }
   return count;

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { areaKey, isSearchMatch, parseTomTom, searchKey } from './tomtom.ts';
+import { areaKey, isHalalPlace, isSearchMatch, parseTomTom, searchKey } from './tomtom.ts';
 
 test('keeps mosques and Islamic centers, drops churches and duplicates', () => {
   const list = parseTomTom({
@@ -42,4 +42,18 @@ test('name search also keeps community centres, never other faiths', () => {
   );
   assert.deepEqual(list.map((m) => m.name), ['Hawa Center']);
   assert.equal(searchKey('  PEACE Islamic-Center ', 38.793, -77.27), 'q1:peace islamic center@38.8,-77.3');
+});
+
+test('halal finder keeps only places that say halal', () => {
+  const list = parseTomTom(
+    {
+      results: [
+        { id: '1', poi: { name: 'Halal Guys', categories: ['restaurant'] }, position: { lat: 1, lon: 2 } },
+        { id: '2', poi: { name: 'Kabob Palace', categories: ['restaurant', 'halal'] }, position: { lat: 1, lon: 2 } },
+        { id: '3', poi: { name: 'Burger Place', categories: ['restaurant'] }, position: { lat: 1, lon: 2 } },
+      ],
+    },
+    isHalalPlace,
+  );
+  assert.deepEqual(list.map((m) => m.name), ['Halal Guys', 'Kabob Palace']);
 });

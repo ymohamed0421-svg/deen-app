@@ -42,3 +42,20 @@ export async function searchMasjidsByName(query: string, latitude: number, longi
     .filter((m) => STRONG_MUSLIM.test(m.name) || !OTHER_FAITH.test(m.name))
     .map((m) => ({ ...m, serviceTimes: null, km: distanceKm(latitude, longitude, m.latitude, m.longitude) }));
 }
+
+/** Halal restaurants and shops near a spot (TomTom places that say halal or zabiha). */
+export async function searchHalalFood(latitude: number, longitude: number): Promise<Masjid[]> {
+  if (!supabase) throw new Error('This needs the app’s server, which isn’t connected.');
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) await supabase.auth.signInAnonymously();
+  const call = supabase.functions.invoke('nearby-masjids', { body: { kind: 'halal', latitude, longitude } });
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('That took too long. Try again.')), 15_000));
+  const res = await Promise.race([call, timeout]);
+  if (res.error || !Array.isArray(res.data?.masjids)) {
+    const body = await (res.error as { context?: Response } | null)?.context?.json?.().catch(() => null);
+    throw new Error(body?.error === 'not-configured' ? 'Halal search isn’t set up yet.' : (body?.error ?? 'Search didn’t work. Try again.'));
+  }
+  return (res.data.masjids as PlaceMasjid[])
+    .map((m) => ({ ...m, serviceTimes: null, km: distanceKm(latitude, longitude, m.latitude, m.longitude) }))
+    .sort((a, b) => a.km - b.km);
+}

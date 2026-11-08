@@ -95,3 +95,17 @@ export function searchKey(query: string, latitude: number, longitude: number) {
   const q = query.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 60);
   return `q1:${q}@${latitude.toFixed(1)},${longitude.toFixed(1)}`;
 }
+
+/** Halal food: only places whose name or TomTom category says halal or zabiha. */
+export function isHalalPlace(r: TomTomResult) {
+  const labels = [
+    r.poi?.name ?? '',
+    ...(r.poi?.categories ?? []),
+    ...(r.poi?.classifications ?? []).flatMap((c) => (c.names ?? []).map((n) => n.name ?? '')),
+  ].join(' ');
+  return /halal|zabiha|zabihah/i.test(labels);
+}
+
+export function halalKey(latitude: number, longitude: number) {
+  return `h1:${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+}

@@ -3,7 +3,7 @@
 //   npx supabase secrets set TOMTOM_API_KEY=...
 // Results are saved per ~1 km area for a week, so most opens cost nothing.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { areaKey, isSearchMatch, searchKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
+import { areaKey, halalKey, isHalalPlace, isSearchMatch, searchKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -54,6 +54,22 @@ async function searchByName(key: string, query: string, lat: number, lon: number
   return parseTomTom(await res.json(), isSearchMatch);
 }
 
+/** Halal restaurants and shops near a point (the same masjid card shape). */
+async function searchHalal(key: string, lat: number, lon: number): Promise<PlaceMasjid[]> {
+  const run = async (text: string, radius: number) => {
+    const url =
+      `https://api.tomtom.com/search/2/poiSearch/${encodeURIComponent(text)}.json?key=${encodeURIComponent(key)}` +
+      `&lat=${lat}&lon=${lon}&radius=${radius}&limit=100`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) throw new Error(`TomTom ${res.status}`);
+    return parseTomTom(await res.json(), isHalalPlace);
+  };
+  const lists = await Promise.all([run('halal', 20_000), run('zabiha', 20_000).catch(() => [] as PlaceMasjid[])]);
+  const all: PlaceMasjid[] = [];
+  for (const m of lists.flat()) if (!all.some((o) => o.id === m.id)) all.push(m);
+  return all;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -71,7 +87,8 @@ Deno.serve(async (req) => {
 
   const query = typeof body?.query === 'string' ? body.query.trim().slice(0, 80) : '';
   if (body?.query !== undefined && query.length < 2) return json({ error: 'Type at least 2 letters.' }, 400);
-  const area = query ? searchKey(query, lat, lon) : areaKey(lat, lon);
+  const halal = body?.kind === 'halal';
+  const area = halal ? halalKey(lat, lon) : query ? searchKey(query, lat, lon) : areaKey(lat, lon);
   const { data: cached } = await admin.from('nearby_cache').select('result, fetched_at').eq('area', area).maybeSingle();
   if (cached && Date.now() - new Date(cached.fetched_at).getTime() < WEEK_MS) return json({ masjids: cached.result });
 
@@ -89,7 +106,9 @@ Deno.serve(async (req) => {
   try {
     // Search from the centre of the area so the saved result fits everyone in it.
     let masjids: PlaceMasjid[];
-    if (query) {
+    if (halal) {
+      masjids = await searchHalal(key, Number(lat.toFixed(2)), Number(lon.toFixed(2)));
+    } else if (query) {
       masjids = await searchByName(key, query, Number(lat.toFixed(1)), Number(lon.toFixed(1)));
     } else {
       const [cLat, cLon] = area.replace(/^v\d+:/, '').split(',').map(Number);
