@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { FriendSync } from '../components/FriendSync';
 import { ReminderSync } from '../components/ReminderSync';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
@@ -37,7 +38,9 @@ export default function RootLayout() {
             <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
+            <Stack.Screen name="friends" options={{ headerShown: true, title: 'Friends' }} />
           </Stack>
+          <FriendSync />
           </RecitationProvider>
         </GameProvider>
       </SettingsProvider>
