@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
-import { fetchPlaceMasjids } from '../lib/nearbyMasjids';
+import { fetchPlaceMasjids, searchMasjidsByName } from '../lib/nearbyMasjids';
 import { distanceKm, findNearbyMasjids, formatDistance, mergeMasjids, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
@@ -145,6 +145,8 @@ export default function MasjidsScreen() {
         </Text>
       </View>
 
+      <MasjidSearch origin={origin} />
+
       <MyMasjids />
 
       {state.kind === 'error' && (
@@ -222,6 +224,7 @@ function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
       <View style={styles.actions}>
         <Chip label="Apple Maps" onPress={() => open(links.apple)} />
         <Chip label="Google Maps" onPress={() => open(links.google)} />
+        <Chip label="Waze" onPress={() => open(links.waze)} />
         {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
         {m.phone && <Chip label="Call" onPress={() => open(`tel:${m.phone!.replace(/[^\d+]/g, '')}`)} />}
       </View>
@@ -280,6 +283,65 @@ function WebsiteTimes({ masjid: m, website, auto }: { masjid: { id: string; name
       )}
       {state.note && <Text style={styles.siteNote}>{state.note}</Text>}
       <Text style={styles.siteNote}>Read automatically, so it can be wrong or out of date. Check with the masjid if it matters.</Text>
+    </View>
+  );
+}
+
+/** Look up any masjid by name, near or far. */
+function MasjidSearch({ origin }: { origin: Origin }) {
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<{ query: string; masjids: Masjid[] } | { query: string; error: string } | 'loading' | null>(null);
+
+  async function run() {
+    const q = text.trim();
+    if (q.length < 2) return;
+    setResult('loading');
+    try {
+      setResult({ query: q, masjids: await searchMasjidsByName(q, origin.latitude, origin.longitude) });
+    } catch (e) {
+      setResult({ query: q, error: e instanceof Error ? e.message : 'Search didn’t work. Try again.' });
+    }
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={styles.searchRow}>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          onSubmitEditing={run}
+          placeholder="Search any masjid by name or town"
+          placeholderTextColor={colors.muted}
+          returnKeyType="search"
+          style={[styles.input, { flex: 1 }]}
+        />
+        <Pressable onPress={run} accessibilityRole="button" accessibilityLabel="Search" style={({ pressed }) => [styles.searchBtn, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.searchBtnText}>Search</Text>
+        </Pressable>
+      </View>
+      {result === 'loading' && (
+        <View style={styles.siteRow}>
+          <ActivityIndicator color={colors.green} />
+          <Text style={styles.address}>Searching…</Text>
+        </View>
+      )}
+      {result && result !== 'loading' && (
+        <>
+          <View style={styles.siteRow}>
+            <Text style={[styles.section, { flex: 1 }]}>Results for “{result.query}”</Text>
+            <Pressable onPress={() => { setResult(null); setText(''); }}>
+              <Text style={styles.chipText}>Clear</Text>
+            </Pressable>
+          </View>
+          {'error' in result ? (
+            <Text style={styles.address}>{result.error}</Text>
+          ) : result.masjids.length === 0 ? (
+            <Text style={styles.address}>No masjid found by that name. Try adding the town, like “Dar Al-Hijrah Falls Church”.</Text>
+          ) : (
+            result.masjids.map((m, i) => <MasjidCard key={`s-${m.id}`} masjid={m} auto={i < 2} />)
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -347,6 +409,7 @@ function MyMasjidCard({ masjid: m, onRemove }: { masjid: MyMasjid; onRemove: () 
   const q = encodeURIComponent([m.name, m.place].filter(Boolean).join(', '));
   const apple = `https://maps.apple.com/?q=${q}`;
   const google = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  const waze = `https://waze.com/ul?q=${q}&navigate=yes`;
   const open = (url: string) => Linking.openURL(url).catch(() => {});
   return (
     <View style={[styles.card, { borderColor: colors.gold }]}>
@@ -358,6 +421,7 @@ function MyMasjidCard({ masjid: m, onRemove }: { masjid: MyMasjid; onRemove: () 
       <View style={styles.actions}>
         <Chip label="Apple Maps" onPress={() => open(apple)} />
         <Chip label="Google Maps" onPress={() => open(google)} />
+        <Chip label="Waze" onPress={() => open(waze)} />
         {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
         <Chip label="Remove" onPress={onRemove} />
       </View>
@@ -404,6 +468,9 @@ const styles = StyleSheet.create({
   siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
   siteValue: { fontSize: 13, fontWeight: '900', color: colors.ink, marginTop: 2, textAlign: 'center' },
   siteNote: { color: colors.muted, fontSize: 12, lineHeight: 16 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchBtn: { backgroundColor: colors.green, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  searchBtnText: { color: '#fff', fontWeight: '900' },
   section: { fontSize: 18, fontWeight: '900', color: colors.ink, marginTop: 4 },
   input: { borderWidth: 2, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.ink, backgroundColor: colors.bg },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },

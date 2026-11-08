@@ -144,6 +144,7 @@ export function mapLinks(m: Pick<Masjid, 'name' | 'latitude' | 'longitude'>) {
   return {
     apple: `https://maps.apple.com/?q=${encodeURIComponent(m.name)}&ll=${ll}`,
     google: `https://www.google.com/maps/search/?api=1&query=${ll}`,
+    waze: `https://waze.com/ul?ll=${ll}&navigate=yes`,
   };
 }
 

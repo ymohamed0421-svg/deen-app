@@ -3,14 +3,14 @@
 //   npx supabase secrets set TOMTOM_API_KEY=...
 // Results are saved per ~1 km area for a week, so most opens cost nothing.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { areaKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
+import { areaKey, isSearchMatch, searchKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 const WEEK_MS = 7 * 86_400_000;
-const DAILY_SEARCHES = 60; // new (not saved) searches per person per day
+const DAILY_SEARCHES = 100; // new (not saved) searches per person per day
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
@@ -44,6 +44,16 @@ async function search(key: string, lat: number, lon: number): Promise<PlaceMasji
   return all;
 }
 
+/** A masjid by name, anywhere: TomTom's fuzzy search, nudged towards where the person is. */
+async function searchByName(key: string, query: string, lat: number, lon: number): Promise<PlaceMasjid[]> {
+  const url =
+    `https://api.tomtom.com/search/2/search/${encodeURIComponent(query)}.json?key=${encodeURIComponent(key)}` +
+    `&lat=${lat}&lon=${lon}&limit=30&idxSet=POI`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`TomTom ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return parseTomTom(await res.json(), isSearchMatch);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -59,7 +69,9 @@ Deno.serve(async (req) => {
     return json({ error: 'Bad location.' }, 400);
   }
 
-  const area = areaKey(lat, lon);
+  const query = typeof body?.query === 'string' ? body.query.trim().slice(0, 80) : '';
+  if (body?.query !== undefined && query.length < 2) return json({ error: 'Type at least 2 letters.' }, 400);
+  const area = query ? searchKey(query, lat, lon) : areaKey(lat, lon);
   const { data: cached } = await admin.from('nearby_cache').select('result, fetched_at').eq('area', area).maybeSingle();
   if (cached && Date.now() - new Date(cached.fetched_at).getTime() < WEEK_MS) return json({ masjids: cached.result });
 
@@ -76,8 +88,13 @@ Deno.serve(async (req) => {
 
   try {
     // Search from the centre of the area so the saved result fits everyone in it.
-    const [cLat, cLon] = area.replace(/^v\d+:/, '').split(',').map(Number);
-    const masjids = await search(key, cLat, cLon);
+    let masjids: PlaceMasjid[];
+    if (query) {
+      masjids = await searchByName(key, query, Number(lat.toFixed(1)), Number(lon.toFixed(1)));
+    } else {
+      const [cLat, cLon] = area.replace(/^v\d+:/, '').split(',').map(Number);
+      masjids = await search(key, cLat, cLon);
+    }
     await admin.from('nearby_cache').upsert({ area, result: masjids, fetched_by: auth.user.id, fetched_at: new Date().toISOString() });
     return json({ masjids });
   } catch (error) {

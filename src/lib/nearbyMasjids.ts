@@ -25,3 +25,20 @@ export async function fetchPlaceMasjids(latitude: number, longitude: number): Pr
     return null;
   }
 }
+
+/** Looks up masjids by name anywhere (TomTom), with distances from where the person is. */
+export async function searchMasjidsByName(query: string, latitude: number, longitude: number): Promise<Masjid[]> {
+  if (!supabase) throw new Error('Search needs the app’s server, which isn’t connected.');
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) await supabase.auth.signInAnonymously();
+  const call = supabase.functions.invoke('nearby-masjids', { body: { query, latitude, longitude } });
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('The search took too long. Try again.')), 15_000));
+  const res = await Promise.race([call, timeout]);
+  if (res.error || !Array.isArray(res.data?.masjids)) {
+    const body = await (res.error as { context?: Response } | null)?.context?.json?.().catch(() => null);
+    throw new Error(body?.error === 'not-configured' ? 'Search isn’t set up yet.' : (body?.error ?? 'Search didn’t work. Try again.'));
+  }
+  return (res.data.masjids as PlaceMasjid[])
+    .filter((m) => STRONG_MUSLIM.test(m.name) || !OTHER_FAITH.test(m.name))
+    .map((m) => ({ ...m, serviceTimes: null, km: distanceKm(latitude, longitude, m.latitude, m.longitude) }));
+}
