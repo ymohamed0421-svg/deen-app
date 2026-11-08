@@ -8,6 +8,7 @@ import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider, useSettings } from '../state/SettingsProvider';
+import { WorshipProvider } from '../state/WorshipProvider';
 import { applyScheme, colors } from '../theme';
 
 export default function RootLayout() {
@@ -15,11 +16,13 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <GameProvider>
+          <WorshipProvider>
           <RecitationProvider>
           <ReminderSync />
           <ThemedApp />
           <TravelCheck />
           </RecitationProvider>
+          </WorshipProvider>
         </GameProvider>
       </SettingsProvider>
     </SafeAreaProvider>
@@ -60,6 +63,9 @@ function ThemedApp() {
         <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
         <Stack.Screen name="zakat" options={{ headerShown: true, title: 'Zakat calculator' }} />
         <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
+        <Stack.Screen name="dhikr" options={{ headerShown: true, title: 'Dhikr' }} />
+        <Stack.Screen name="calendar" options={{ headerShown: true, title: 'Islamic calendar' }} />
+        <Stack.Screen name="ramadan" options={{ headerShown: true, title: 'Ramadan' }} />
         <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
         <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
       </Stack>
