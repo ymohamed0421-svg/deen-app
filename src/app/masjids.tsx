@@ -1,10 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
-import { findNearbyMasjids, formatDistance, mapLinks, type Masjid } from '../lib/masjids';
+import { distanceKm, findNearbyMasjids, formatDistance, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
 import { colors } from '../theme';
@@ -14,7 +15,10 @@ type State =
   | { kind: 'loading'; step: string }
   | { kind: 'no-location' }
   | { kind: 'error'; origin: Origin }
-  | { kind: 'done'; origin: Origin; masjids: Masjid[] };
+  | { kind: 'done'; origin: Origin; masjids: Masjid[]; stale?: boolean };
+
+const CACHE_KEY = 'deen-app/masjids/last/v1';
+type Cached = { latitude: number; longitude: number; masjids: Masjid[] };
 
 function within<T>(ms: number, p: Promise<T>): Promise<T | null> {
   return Promise.race([p, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
@@ -47,9 +51,18 @@ export default function MasjidsScreen() {
     if (!origin) return setState({ kind: 'no-location' });
     setState({ kind: 'loading', step: 'Finding masjids near you…' });
     try {
-      setState({ kind: 'done', origin, masjids: await findNearbyMasjids(origin.latitude, origin.longitude) });
+      const masjids = await findNearbyMasjids(origin.latitude, origin.longitude);
+      setState({ kind: 'done', origin, masjids });
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ latitude: origin.latitude, longitude: origin.longitude, masjids })).catch(() => {});
     } catch {
-      setState({ kind: 'error', origin });
+      // The free map servers are sometimes busy: fall back to the last list found near here.
+      const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
+      const cached = raw ? (JSON.parse(raw) as Cached) : null;
+      if (cached && distanceKm(cached.latitude, cached.longitude, origin.latitude, origin.longitude) < 5) {
+        setState({ kind: 'done', origin, masjids: cached.masjids, stale: true });
+      } else {
+        setState({ kind: 'error', origin });
+      }
     }
   }, [settings.location]);
 
@@ -116,8 +129,12 @@ export default function MasjidsScreen() {
 
       {state.kind === 'error' && (
         <View style={styles.card}>
-          <Text style={styles.text}>Couldn’t load masjids right now. Check your connection and try again.</Text>
+          <Text style={styles.text}>The free map service is busy right now. Try again in a minute.</Text>
           <Button title="Try again" onPress={() => load()} />
+          <Chip
+            label="Search Google Maps instead"
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/mosque/@${state.origin.latitude},${state.origin.longitude},13z`).catch(() => {})}
+          />
         </View>
       )}
 
@@ -129,6 +146,12 @@ export default function MasjidsScreen() {
             onPress={() => Linking.openURL(`https://www.google.com/maps/search/mosque/@${origin.latitude},${origin.longitude},12z`)}
           />
         </View>
+      )}
+
+      {state.kind === 'done' && state.stale && (
+        <Pressable onPress={() => load()}>
+          <Text style={styles.address}>Showing the list from last time (the map service is busy). Tap to refresh.</Text>
+        </Pressable>
       )}
 
       {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} />)}

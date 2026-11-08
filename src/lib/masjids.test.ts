@@ -1,14 +1,23 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildQuery, formatDistance, mapLinks, parseOverpass, type OsmElement } from './masjids.ts';
+import { buildQuery, isMasjid, formatDistance, mapLinks, parseOverpass, type OsmElement } from './masjids.ts';
 
 test('builds an Overpass query for mosques around a point', () => {
   const q = buildQuery(38.7849, -77.1872, 10000);
-  assert.match(q, /\["religion"="muslim"\]\(around:10000,38\.78490,-77\.18720\)/);
+  assert.match(q, /\["amenity"="place_of_worship"\]\(around:10000,38\.78490,-77\.18720\)/);
   assert.match(q, /out center tags/);
   assert.match(q, /\["building"="mosque"\]/);
-  assert.match(q, /islamic cent/);
+  assert.match(q, /\["amenity"="community_centre"\]/);
+  assert.match(buildQuery(1, 2, 40000, false), /\["religion"="muslim"\]/);
+});
+
+test('picks masjids out of all places of worship', () => {
+  assert.ok(isMasjid({ name: 'PEACE Islamic Center' }));
+  assert.ok(isMasjid({ name: 'Dar Al-Hijrah', religion: 'muslim' }));
+  assert.ok(isMasjid({ name: 'Anything', building: 'mosque' }));
+  assert.ok(!isMasjid({ name: 'St. Mary Church', religion: 'christian' }));
+  assert.ok(!isMasjid({ name: 'Burke Community Center' }));
 });
 
 test('parses, sorts nearest first, drops unnamed and duplicate entries', () => {
