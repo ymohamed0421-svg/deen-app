@@ -9,17 +9,21 @@ import { RECITERS, ayahUrl } from '../quran/reciters';
 import { SURAHS } from '../quran/surahs';
 import { useSettings } from './SettingsProvider';
 
-export type LoopMode = 'off' | 'ayah' | 'surah';
+/** 'range' repeats a stretch of ayahs (for memorizing); 'ayah' is a range of one. */
+export type LoopMode = 'off' | 'ayah' | 'range' | 'surah';
+export type AyahRange = { from: number; to: number };
 
 type Recitation = {
   surah: number | null;
   index: number;
   playing: boolean;
   loop: LoopMode;
+  range: AyahRange;
   playAyah: (surah: number, index: number) => void;
   toggle: () => void;
   stop: () => void;
   setLoop: (loop: LoopMode) => void;
+  loopRange: (surah: number, from: number, to: number) => void;
   changeReciter: (reciterId: string) => void;
 };
 
@@ -29,7 +33,8 @@ type Now = {
   surah: number | null;
   index: number;
   loop: LoopMode;
-  loopedAyah: number;
+  /** The ayahs repeated when loop is 'ayah' or 'range' (0 based, inclusive). */
+  range: AyahRange;
   reciter: string;
   /** Set when a full-surah file is loaded; null when playing ayah by ayah. */
   full: { reciter: string; surah: number; audio: SurahAudio } | null;
@@ -42,10 +47,11 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoopState] = useState<LoopMode>('off');
+  const [range, setRangeState] = useState<AyahRange>({ from: 0, to: 0 });
   const request = useRef(0);
 
   // Event handlers read these, so keep the latest values in a ref.
-  const now = useRef<Now>({ surah: null, index: 0, loop: 'off', loopedAyah: 0, reciter: settings.reciter, full: null });
+  const now = useRef<Now>({ surah: null, index: 0, loop: 'off', range: { from: 0, to: 0 }, reciter: settings.reciter, full: null });
   now.current.reciter = settings.reciter;
 
   function setAt(i: number) {
@@ -56,6 +62,13 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
       if (s !== null) showOnLockScreen(s, i, reciter);
     }
   }
+
+  function setRange(r: AyahRange) {
+    now.current.range = r;
+    setRangeState(r);
+  }
+
+  const repeating = () => now.current.loop === 'ayah' || now.current.loop === 'range';
 
   function el() {
     if (!audio.current) {
@@ -76,9 +89,13 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     const f = now.current.full;
     if (!a || !f) return;
     const t = f.audio.timings;
-    if (now.current.loop === 'ayah') {
-      const own = t[now.current.loopedAyah];
-      if (own && (a.currentTime >= own.to - 0.15 || a.currentTime < own.from - 0.5)) a.currentTime = own.from;
+    if (repeating()) {
+      const { from, to } = now.current.range;
+      const first = t[from];
+      const last = t[to];
+      // The last ayah of the surah runs to the end of the file; onEnded loops that case.
+      const pastEnd = last && to < t.length - 1 && a.currentTime >= last.to - 0.15;
+      if (first && (pastEnd || a.currentTime < first.from - 0.5)) a.currentTime = first.from;
     }
     setAt(ayahAt(t, a.currentTime));
   }
@@ -87,14 +104,16 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     const { surah: s, index: i, loop: l, reciter, full } = now.current;
     if (s === null) return;
     if (full) {
-      if (l === 'surah') {
-        audio.current!.currentTime = 0;
+      if (l === 'surah' || repeating()) {
+        audio.current!.currentTime = l === 'surah' ? 0 : (full.audio.timings[now.current.range.from]?.from ?? 0);
         audio.current!.play().catch(() => {});
       }
       return;
     }
     const total = SURAHS.find((x) => x.id === s)?.verses ?? 0;
-    if (i + 1 < total) playOneAyah(s, i + 1, reciter);
+    const { from, to } = now.current.range;
+    if (l === 'range') playOneAyah(s, i + 1 > to || i < from ? from : i + 1, reciter);
+    else if (i + 1 < total) playOneAyah(s, i + 1, reciter);
     else if (l === 'surah') playOneAyah(s, 0, reciter);
   }
 
@@ -111,7 +130,8 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     const ticket = ++request.current;
     const a = el();
     setSurah(s);
-    now.current = { ...now.current, surah: s, loopedAyah: i };
+    now.current = { ...now.current, surah: s };
+    if (now.current.loop === 'ayah') setRange({ from: i, to: i });
     showOnLockScreen(s, i, reciter);
     const qdc = fullSurahId(reciter);
     const f = now.current.full;
@@ -172,12 +192,25 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function setLoop(next: LoopMode) {
+    setLoopState(next);
+    now.current.loop = next;
+    if (next === 'ayah') setRange({ from: now.current.index, to: now.current.index });
+    if (audio.current) audio.current.loop = next === 'ayah' && !now.current.full;
+  }
+
   const value: Recitation = {
     surah,
     index,
     playing,
     loop,
-    playAyah: (s, i) => void start(s, i, settings.reciter),
+    range,
+    playAyah: (s, i) => {
+      // Playing an ayah outside the repeated range ends the range loop.
+      const r = now.current.range;
+      if (now.current.loop === 'range' && (s !== now.current.surah || i < r.from || i > r.to)) setLoop('off');
+      void start(s, i, settings.reciter);
+    },
     toggle: () => {
       const a = audio.current;
       if (!a || surah === null) return;
@@ -185,11 +218,11 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
       else a.pause();
     },
     stop: () => audio.current?.pause(),
-    setLoop: (next) => {
-      setLoopState(next);
-      now.current.loop = next;
-      now.current.loopedAyah = now.current.index;
-      if (audio.current) audio.current.loop = next === 'ayah' && !now.current.full;
+    setLoop,
+    loopRange: (s, from, to) => {
+      setLoop('range');
+      setRange({ from: Math.min(from, to), to: Math.max(from, to) });
+      void start(s, Math.min(from, to), settings.reciter);
     },
     changeReciter: (reciterId) => {
       update({ reciter: reciterId });

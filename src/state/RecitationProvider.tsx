@@ -17,8 +17,10 @@ import { RECITERS, ayahUrl } from '../quran/reciters';
 import { SURAHS } from '../quran/surahs';
 import { useSettings } from './SettingsProvider';
 
-export type LoopMode = 'off' | 'ayah' | 'surah';
-const TO_PLAYLIST: Record<LoopMode, AudioPlaylistLoopMode> = { off: 'none', ayah: 'single', surah: 'all' };
+/** 'range' repeats a stretch of ayahs (for memorizing); 'ayah' is a range of one. */
+export type LoopMode = 'off' | 'ayah' | 'range' | 'surah';
+export type AyahRange = { from: number; to: number };
+const TO_PLAYLIST: Record<LoopMode, AudioPlaylistLoopMode> = { off: 'none', ayah: 'single', range: 'all', surah: 'all' };
 
 type Recitation = {
   /** The surah in the player, or null when nothing has been played. */
@@ -27,10 +29,14 @@ type Recitation = {
   index: number;
   playing: boolean;
   loop: LoopMode;
+  /** The ayahs being repeated (0 based, inclusive) when loop is 'ayah' or 'range'. */
+  range: AyahRange;
   playAyah: (surah: number, index: number) => void;
   toggle: () => void;
   stop: () => void;
   setLoop: (loop: LoopMode) => void;
+  /** Repeats ayahs from..to of a surah over and over, starting at from. */
+  loopRange: (surah: number, from: number, to: number) => void;
   changeReciter: (reciterId: string) => void;
 };
 
@@ -53,7 +59,8 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
   const [surah, setSurah] = useState<number | null>(null);
   const [loop, setLoopState] = useState<LoopMode>('off');
   const loopRef = useRef<LoopMode>('off'); // read by start(), which can run in the same tap as setLoop
-  const [loopedAyah, setLoopedAyah] = useState(0);
+  const [range, setRangeState] = useState<AyahRange>({ from: 0, to: 0 });
+  const rangeRef = useRef<AyahRange>({ from: 0, to: 0 });
   const request = useRef(0);
   const pendingSeek = useRef<number | null>(null);
 
@@ -72,12 +79,38 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
     }
   }, [status.isLoaded, status.duration]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Loop one ayah in the full-surah file by jumping back to its start.
+  function setRange(r: AyahRange) {
+    rangeRef.current = r;
+    setRangeState(r);
+  }
+
+  /** Whether the loop runs to the surah's last ayah, so the file itself has to loop too. */
+  function rangeHitsEnd(l: LoopMode, r: AyahRange) {
+    const t = full.current?.audio.timings;
+    return (l === 'ayah' || l === 'range') && !!t && r.to >= t.length - 1;
+  }
+
+  function fileLoops(l: LoopMode) {
+    return l === 'surah' || rangeHitsEnd(l, rangeRef.current);
+  }
+
+  // Loop ayahs in the full-surah file by jumping back to the start of the first one, with no gap.
   useEffect(() => {
-    if (mode !== 'full' || loop !== 'ayah' || !full.current || !status.playing) return;
-    const t = full.current.audio.timings[loopedAyah];
-    if (t && (status.currentTime >= t.to - 0.08 || status.currentTime < t.from - 0.5)) player.seekTo(t.from);
+    if (mode !== 'full' || (loop !== 'ayah' && loop !== 'range') || !full.current || !status.playing) return;
+    const t = full.current.audio.timings;
+    const a = t[range.from];
+    const b = t[range.to];
+    if (!a || !b) return;
+    const pastEnd = range.to < t.length - 1 && status.currentTime >= b.to - 0.08;
+    if (pastEnd || status.currentTime < a.from - 0.5) player.seekTo(a.from);
   }, [status.currentTime]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ayah-by-ayah: when playback leaves the range, go back to its first ayah.
+  useEffect(() => {
+    if (mode !== 'ayah' || loop !== 'range') return;
+    const i = plStatus.currentIndex;
+    if (i < range.from || i > range.to) playlist.skipTo(range.from);
+  }, [plStatus.currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function lockScreen(target: { setActiveForLockScreen: (a: boolean, m?: object) => void }, s: number, reciter: string) {
     const meta = SURAHS.find((x) => x.id === s);
@@ -110,7 +143,7 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
   async function start(s: number, i: number, reciter: string) {
     const ticket = ++request.current;
     setSurah(s);
-    setLoopedAyah(i);
+    if (loopRef.current === 'ayah') setRange({ from: i, to: i });
     const qdc = fullSurahId(reciter);
     if (qdc === null) return playByAyah(s, i, reciter);
     try {
@@ -119,13 +152,14 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
       if (ticket !== request.current) return; // the person tapped something else meanwhile
       playlist.pause();
       setMode('full');
-      player.loop = loopRef.current === 'surah';
       if (!sameFile) {
         // Seeking only works once the new file has loaded; the effect below does it then.
         full.current = { surah: s, reciter, audio };
+        player.loop = fileLoops(loopRef.current);
         pendingSeek.current = audio.timings[i]?.from ?? 0;
         player.replace({ uri: audio.url });
       } else {
+        player.loop = fileLoops(loopRef.current);
         await player.seekTo(audio.timings[i]?.from ?? 0);
       }
       player.play();
@@ -137,12 +171,26 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
 
   const playing = mode === 'full' ? status.playing : plStatus.playing;
 
+  function setLoop(next: LoopMode) {
+    setLoopState(next);
+    loopRef.current = next;
+    if (next === 'ayah') setRange({ from: index, to: index });
+    player.loop = fileLoops(next);
+    playlist.loop = TO_PLAYLIST[next];
+  }
+
   const value: Recitation = {
     surah,
     index,
     playing,
     loop,
-    playAyah: (s, i) => void start(s, i, settings.reciter),
+    range,
+    playAyah: (s, i) => {
+      // Playing an ayah outside the repeated range ends the range loop.
+      const r = rangeRef.current;
+      if (loopRef.current === 'range' && (s !== surah || i < r.from || i > r.to)) setLoop('off');
+      void start(s, i, settings.reciter);
+    },
     toggle: () => {
       if (surah === null) return;
       const p = mode === 'full' ? player : playlist;
@@ -153,12 +201,14 @@ export function RecitationProvider({ children }: { children: ReactNode }) {
       player.pause();
       playlist.pause();
     },
-    setLoop: (next) => {
-      setLoopState(next);
-      loopRef.current = next;
-      setLoopedAyah(index);
-      player.loop = next === 'surah';
-      playlist.loop = TO_PLAYLIST[next];
+    setLoop,
+    loopRange: (s, from, to) => {
+      const r = { from: Math.min(from, to), to: Math.max(from, to) };
+      setLoopState('range');
+      loopRef.current = 'range';
+      setRange(r);
+      playlist.loop = TO_PLAYLIST.range;
+      void start(s, r.from, settings.reciter);
     },
     changeReciter: (reciterId) => {
       update({ reciter: reciterId });
