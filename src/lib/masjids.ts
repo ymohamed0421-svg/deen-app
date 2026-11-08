@@ -32,7 +32,16 @@ const ENDPOINTS = [
 
 export function buildQuery(latitude: number, longitude: number, radiusMeters: number) {
   const around = `(around:${Math.round(radiusMeters)},${latitude.toFixed(5)},${longitude.toFixed(5)})`;
-  return `[out:json][timeout:25];nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};out center tags 80;`;
+  // Many masjids are mapped without religion=muslim, or as a community centre, so also match by name.
+  const named = '["name"~"masjid|mosque|islamic cent|islamic soc|musall|jamia|jame|muslim community",i]';
+  return (
+    `[out:json][timeout:25];(` +
+    `nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};` +
+    `nwr["building"="mosque"]${around};` +
+    `nwr${named}["amenity"~"place_of_worship|community_centre|social_centre"]${around};` +
+    `nwr${named}["building"]${around};` +
+    `);out center tags 120;`
+  );
 }
 
 export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
@@ -82,25 +91,36 @@ export function parseOverpass(json: { elements?: OsmElement[] }, latitude: numbe
   return out.filter((m, i) => !out.slice(0, i).some((o) => o.name === m.name && distanceKm(o.latitude, o.longitude, m.latitude, m.longitude) < 0.15));
 }
 
+/** Asks every Overpass server at once and takes the first good answer, giving up after 20 seconds. */
 async function query(q: string) {
-  let lastError: unknown;
-  for (const base of ENDPOINTS) {
-    try {
-      const res = await fetch(`${base}?data=${encodeURIComponent(q)}`);
-      if (!res.ok) throw new Error(`Overpass ${res.status}`);
-      return (await res.json()) as { elements?: OsmElement[] };
-    } catch (e) {
-      lastError = e;
-    }
+  const controllers = ENDPOINTS.map(() => new AbortController());
+  const timer = setTimeout(() => controllers.forEach((c) => c.abort()), 20_000);
+  try {
+    return await Promise.any(
+      ENDPOINTS.map(async (base, i) => {
+        const res = await fetch(`${base}?data=${encodeURIComponent(q)}`, { signal: controllers[i].signal });
+        if (!res.ok) throw new Error(`Overpass ${res.status}`);
+        const json = (await res.json()) as { elements?: OsmElement[]; remark?: string };
+        if (!json.elements) throw new Error(json.remark ?? 'Overpass gave no data');
+        return json;
+      }),
+    );
+  } finally {
+    clearTimeout(timer);
+    controllers.forEach((c) => c.abort());
   }
-  throw lastError;
 }
 
 /** The nearest masjids, widening the search from 10 km to 40 km when there are few close by. */
 export async function findNearbyMasjids(latitude: number, longitude: number, limit = 25) {
   let found: Masjid[] = [];
   for (const radius of [10_000, 40_000]) {
-    found = parseOverpass(await query(buildQuery(latitude, longitude, radius)), latitude, longitude);
+    try {
+      found = parseOverpass(await query(buildQuery(latitude, longitude, radius)), latitude, longitude);
+    } catch (e) {
+      if (found.length === 0) throw e; // keep the closer results if only the wider search fails
+      break;
+    }
     if (found.length >= 5) break;
   }
   return found.slice(0, limit);

@@ -31,7 +31,9 @@ async function load(m: { id: string; name: string; website: string }, date: stri
     const { error } = await supabase.auth.signInAnonymously();
     if (error) throw new Error('Could not sign in.');
   }
-  const { data, error } = await supabase.functions.invoke('masjid-times', { body: { ...m, date } });
+  const call = supabase.functions.invoke('masjid-times', { body: { ...m, date } });
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Took too long.')), 45_000));
+  const { data, error } = await Promise.race([call, timeout]);
   if (error) {
     const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
     throw new Error(body?.error ?? 'Couldn’t read the website.');

@@ -7,6 +7,8 @@ test('builds an Overpass query for mosques around a point', () => {
   const q = buildQuery(38.7849, -77.1872, 10000);
   assert.match(q, /\["religion"="muslim"\]\(around:10000,38\.78490,-77\.18720\)/);
   assert.match(q, /out center tags/);
+  assert.match(q, /\["building"="mosque"\]/);
+  assert.match(q, /islamic cent/);
 });
 
 test('parses, sorts nearest first, drops unnamed and duplicate entries', () => {

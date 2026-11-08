@@ -1,27 +1,34 @@
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
 import { findNearbyMasjids, formatDistance, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
-import { useSettings, type SavedLocation } from '../state/SettingsProvider';
+import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
 import { colors } from '../theme';
 
 type Origin = { latitude: number; longitude: number; fromGps: boolean };
 type State =
-  | { kind: 'loading' }
+  | { kind: 'loading'; step: string }
   | { kind: 'no-location' }
   | { kind: 'error'; origin: Origin }
   | { kind: 'done'; origin: Origin; masjids: Masjid[] };
 
+function within<T>(ms: number, p: Promise<T>): Promise<T | null> {
+  return Promise.race([p, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
+/** The phone's position, or null after 12 seconds (some browsers never answer if the prompt is ignored). */
 async function currentPosition(): Promise<Origin | null> {
   try {
-    const perm = await Location.requestForegroundPermissionsAsync();
-    if (!perm.granted) return null;
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude, fromGps: true };
+    const perm = await within(20_000, Location.requestForegroundPermissionsAsync());
+    if (!perm?.granted) return null;
+    const pos =
+      (await within(12_000, Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }))) ??
+      (await within(3_000, Location.getLastKnownPositionAsync()).catch(() => null));
+    return pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude, fromGps: true } : null;
   } catch {
     return null;
   }
@@ -29,14 +36,16 @@ async function currentPosition(): Promise<Origin | null> {
 
 export default function MasjidsScreen() {
   const { settings } = useSettings();
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  const [state, setState] = useState<State>({ kind: 'loading', step: 'Getting your location…' });
   const [now] = useState(() => new Date());
 
-  const load = useCallback(async () => {
-    setState({ kind: 'loading' });
+  const load = useCallback(async (useSaved = false) => {
+    setState({ kind: 'loading', step: useSaved ? 'Finding masjids near you…' : 'Getting your location…' });
     const saved = settings.location;
-    const origin = (await currentPosition()) ?? (saved ? { latitude: saved.latitude, longitude: saved.longitude, fromGps: false } : null);
+    const fromSaved = saved ? { latitude: saved.latitude, longitude: saved.longitude, fromGps: false } : null;
+    const origin = useSaved ? fromSaved : ((await currentPosition()) ?? fromSaved);
     if (!origin) return setState({ kind: 'no-location' });
+    setState({ kind: 'loading', step: 'Finding masjids near you…' });
     try {
       setState({ kind: 'done', origin, masjids: await findNearbyMasjids(origin.latitude, origin.longitude) });
     } catch {
@@ -52,7 +61,12 @@ export default function MasjidsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.green} size="large" />
-        <Text style={styles.muted}>Finding masjids near you…</Text>
+        <Text style={styles.muted}>{state.step}</Text>
+        {settings.location && state.step.startsWith('Getting') && (
+          <Pressable onPress={() => load(true)} style={{ marginTop: 8 }}>
+            <Text style={styles.chipText}>Use {settings.location.name} instead</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -62,7 +76,7 @@ export default function MasjidsScreen() {
       <View style={[styles.center, { padding: 24 }]}>
         <Text style={styles.big}>📍</Text>
         <Text style={styles.text}>Allow location, or set your city, to see the masjids closest to you.</Text>
-        <Button title="Try again" onPress={load} style={{ alignSelf: 'stretch' }} />
+        <Button title="Try again" onPress={() => load()} style={{ alignSelf: 'stretch' }} />
         <Button title="Set my city" variant="outline" onPress={() => router.push('/location')} style={{ alignSelf: 'stretch' }} />
       </View>
     );
@@ -98,10 +112,12 @@ export default function MasjidsScreen() {
         </Text>
       </View>
 
+      <MyMasjids />
+
       {state.kind === 'error' && (
         <View style={styles.card}>
           <Text style={styles.text}>Couldn’t load masjids right now. Check your connection and try again.</Text>
-          <Button title="Try again" onPress={load} />
+          <Button title="Try again" onPress={() => load()} />
         </View>
       )}
 
@@ -118,7 +134,16 @@ export default function MasjidsScreen() {
       {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} />)}
 
       {state.kind === 'done' && state.masjids.length > 0 && (
-        <Text style={styles.credit}>Masjid list from OpenStreetMap contributors. A masjid missing? It can be added at openstreetmap.org.</Text>
+        <View style={{ gap: 8, marginTop: 8 }}>
+          <Chip
+            label="Don’t see your masjid? Search Google Maps"
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/mosque/@${origin.latitude},${origin.longitude},12z`).catch(() => {})}
+          />
+          <Text style={styles.credit}>
+            Masjid list from OpenStreetMap, a free map anyone can edit. Add a missing masjid at openstreetmap.org and it shows here for
+            everyone within a day.
+          </Text>
+        </View>
       )}
     </ScrollView>
   );
@@ -164,7 +189,7 @@ function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
 const IQAMAH_ROWS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
 /** The masjid's own iqamah and Jumu'ah times, read off its website. */
-function WebsiteTimes({ masjid: m, website, auto }: { masjid: Masjid; website: string; auto: boolean }) {
+function WebsiteTimes({ masjid: m, website, auto }: { masjid: { id: string; name: string }; website: string; auto: boolean }) {
   const [state, setState] = useState<'idle' | 'loading' | 'failed' | MasjidTimes>(auto ? 'loading' : 'idle');
 
   const load = useCallback(() => {
@@ -216,6 +241,87 @@ function WebsiteTimes({ masjid: m, website, auto }: { masjid: Masjid; website: s
   );
 }
 
+function slug(s: string) {
+  return s.toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'masjid';
+}
+
+/** Masjids the user added by hand: always shown first, with their website's times. */
+function MyMasjids() {
+  const { settings, update } = useSettings();
+  const mine = settings.myMasjids ?? [];
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [place, setPlace] = useState('');
+  const [website, setWebsite] = useState('');
+
+  function save() {
+    const n = name.trim();
+    if (!n) return;
+    let site = website.trim() || null;
+    if (site && !/^https?:\/\//i.test(site)) site = `https://${site}`;
+    const m: MyMasjid = { id: `site/${slug(site ?? `${n}-${place}`)}`, name: n, place: place.trim(), website: site };
+    update({ myMasjids: [...mine.filter((x) => x.id !== m.id), m] });
+    setName('');
+    setPlace('');
+    setWebsite('');
+    setAdding(false);
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      {mine.length > 0 && <Text style={styles.section}>Your masjids</Text>}
+      {mine.map((m) => (
+        <MyMasjidCard key={m.id} masjid={m} onRemove={() => update({ myMasjids: mine.filter((x) => x.id !== m.id) })} />
+      ))}
+      {adding ? (
+        <View style={styles.card}>
+          <Text style={styles.name}>Add a masjid</Text>
+          <TextInput value={name} onChangeText={setName} placeholder="Name, e.g. PEACE Islamic Center" placeholderTextColor={colors.muted} style={styles.input} />
+          <TextInput value={place} onChangeText={setPlace} placeholder="Town or address, e.g. Burke, VA" placeholderTextColor={colors.muted} style={styles.input} />
+          <TextInput
+            value={website}
+            onChangeText={setWebsite}
+            placeholder="Website (optional, for its prayer times)"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            keyboardType="url"
+            style={styles.input}
+          />
+          <View style={styles.actions}>
+            <Button title="Save" onPress={save} disabled={!name.trim()} style={{ flex: 1 }} />
+            <Button title="Cancel" variant="outline" onPress={() => setAdding(false)} style={{ flex: 1 }} />
+          </View>
+        </View>
+      ) : (
+        <Chip label="＋ Add a masjid that’s missing" onPress={() => setAdding(true)} />
+      )}
+      {(mine.length > 0 || adding) && <Text style={styles.section}>Nearby</Text>}
+    </View>
+  );
+}
+
+function MyMasjidCard({ masjid: m, onRemove }: { masjid: MyMasjid; onRemove: () => void }) {
+  const q = encodeURIComponent([m.name, m.place].filter(Boolean).join(', '));
+  const apple = `https://maps.apple.com/?q=${q}`;
+  const google = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  const open = (url: string) => Linking.openURL(url).catch(() => {});
+  return (
+    <View style={[styles.card, { borderColor: colors.gold }]}>
+      <Pressable onPress={() => open(Platform.OS === 'ios' ? apple : google)} accessibilityRole="link">
+        <Text style={styles.name}>⭐ {m.name}</Text>
+        {!!m.place && <Text style={styles.address}>{m.place}</Text>}
+      </Pressable>
+      {m.website && masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto />}
+      <View style={styles.actions}>
+        <Chip label="Apple Maps" onPress={() => open(apple)} />
+        <Chip label="Google Maps" onPress={() => open(google)} />
+        {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
+        <Chip label="Remove" onPress={onRemove} />
+      </View>
+    </View>
+  );
+}
+
 function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.chip, pressed && { opacity: 0.6 }]} accessibilityRole="button">
@@ -255,5 +361,7 @@ const styles = StyleSheet.create({
   siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
   siteValue: { fontSize: 13, fontWeight: '900', color: colors.ink, marginTop: 2, textAlign: 'center' },
   siteNote: { color: colors.muted, fontSize: 12, lineHeight: 16 },
+  section: { fontSize: 18, fontWeight: '900', color: colors.ink, marginTop: 4 },
+  input: { borderWidth: 2, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.ink, backgroundColor: colors.bg },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
 });
