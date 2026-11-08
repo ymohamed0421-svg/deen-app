@@ -18,6 +18,8 @@ test('picks masjids out of all places of worship', () => {
   assert.ok(isMasjid({ name: 'Anything', building: 'mosque' }));
   assert.ok(!isMasjid({ name: 'St. Mary Church', religion: 'christian' }));
   assert.ok(!isMasjid({ name: 'Burke Community Center' }));
+  assert.ok(!isMasjid({ name: 'Temple Rodef Shalom', building: 'mosque' }));
+  assert.ok(isMasjid({ name: 'Temple Hills Mosque' }));
 });
 
 test('parses, sorts nearest first, drops unnamed and duplicate entries', () => {

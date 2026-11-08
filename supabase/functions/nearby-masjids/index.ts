@@ -3,7 +3,7 @@
 //   npx supabase secrets set TOMTOM_API_KEY=...
 // Results are saved per ~1 km area for a week, so most opens cost nothing.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { MOSQUE_CATEGORY, WORSHIP_CATEGORY, areaKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
+import { areaKey, parseTomTom, type PlaceMasjid } from '../_shared/tomtom.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -16,27 +16,31 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 }
 
-async function tomtom(key: string, lat: number, lon: number, radius: number, categorySet: number) {
+/** One TomTom search: `categorySearch` matches TomTom's own category name, `poiSearch` matches place names. */
+async function tomtom(key: string, kind: 'categorySearch' | 'poiSearch', text: string, lat: number, lon: number, radius: number) {
   const url =
-    `https://api.tomtom.com/search/2/nearbySearch/.json?key=${encodeURIComponent(key)}` +
-    `&lat=${lat}&lon=${lon}&radius=${radius}&limit=100&categorySet=${categorySet}`;
+    `https://api.tomtom.com/search/2/${kind}/${encodeURIComponent(text)}.json?key=${encodeURIComponent(key)}` +
+    `&lat=${lat}&lon=${lon}&radius=${radius}&limit=100`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`TomTom ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return parseTomTom(await res.json());
 }
 
 async function search(key: string, lat: number, lon: number): Promise<PlaceMasjid[]> {
-  // Mosques by category, plus every place of worship nearby picked by name (some masjids are
-  // filed only as "place of worship"). Widen when few are close.
-  const [mosques, worship] = await Promise.all([
-    tomtom(key, lat, lon, 25_000, MOSQUE_CATEGORY),
-    tomtom(key, lat, lon, 10_000, WORSHIP_CATEGORY).catch(() => [] as PlaceMasjid[]),
-  ]);
-  let all = [...mosques, ...worship.filter((w) => !mosques.some((m) => m.id === w.id))];
-  if (all.length < 5) {
-    const far = await tomtom(key, lat, lon, 50_000, MOSQUE_CATEGORY).catch(() => [] as PlaceMasjid[]);
-    all = [...all, ...far.filter((f) => !all.some((m) => m.id === f.id))];
-  }
+  // Ask for mosques by TomTom's category, plus places named "masjid" or "Islamic center"
+  // (some are filed under a general category). A dense area has hundreds of churches, so
+  // searching all places of worship would crowd masjids out. Everything is filtered again.
+  const searches: [Parameters<typeof tomtom>[1], string][] = [
+    ['categorySearch', 'mosque'],
+    ['poiSearch', 'masjid'],
+    ['poiSearch', 'islamic center'],
+  ];
+  const run = (radius: number) =>
+    Promise.all(searches.map(([kind, text]) => tomtom(key, kind, text, lat, lon, radius).catch(() => [] as PlaceMasjid[])));
+  let lists = await run(30_000);
+  if (lists.flat().length < 5) lists = await run(60_000);
+  const all: PlaceMasjid[] = [];
+  for (const m of lists.flat()) if (!all.some((o) => o.id === m.id)) all.push(m);
   return all;
 }
 
@@ -72,7 +76,7 @@ Deno.serve(async (req) => {
 
   try {
     // Search from the centre of the area so the saved result fits everyone in it.
-    const [cLat, cLon] = area.split(',').map(Number);
+    const [cLat, cLon] = area.replace(/^v\d+:/, '').split(',').map(Number);
     const masjids = await search(key, cLat, cLon);
     await admin.from('nearby_cache').upsert({ area, result: masjids, fetched_by: auth.user.id, fetched_at: new Date().toISOString() });
     return json({ masjids });
