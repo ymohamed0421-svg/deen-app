@@ -40,6 +40,7 @@ test('parses, sorts nearest first, drops unnamed and duplicate entries', () => {
 
 test('map links and distances', () => {
   const l = mapLinks({ name: 'Dar Al-Hijrah', latitude: 38.86, longitude: -77.14 });
+  assert.equal(l.waze, 'https://waze.com/ul?ll=38.86,-77.14&navigate=yes');
   assert.equal(l.google, 'https://www.google.com/maps/search/?api=1&query=38.86,-77.14');
   assert.match(l.apple, /^https:\/\/maps\.apple\.com\/\?q=Dar%20Al-Hijrah&ll=38\.86,-77\.14$/);
   assert.equal(formatDistance(1.609344, 'en-US'), '1.0 mi');

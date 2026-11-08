@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FriendSync } from '../components/FriendSync';
 import { ReminderSync } from '../components/ReminderSync';
+import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider } from '../state/SettingsProvider';
@@ -37,10 +38,12 @@ export default function RootLayout() {
             <Stack.Screen name="stories/index" options={{ headerShown: true, title: 'Stories' }} />
             <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
+            <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
             <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
             <Stack.Screen name="friends" options={{ headerShown: true, title: 'Friends' }} />
           </Stack>
           <FriendSync />
+          <TravelCheck />
           </RecitationProvider>
         </GameProvider>
       </SettingsProvider>

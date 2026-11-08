@@ -100,6 +100,18 @@ async function lookUp(key: string, website: string, name: string, date: string):
   return normalizeTimes(await readTimes(key, name, date, useful), source);
 }
 
+const DAILY_CORRECTIONS = 20;
+
+/** Times an app user typed in for this masjid. They win over what was read off the website. */
+async function correctionFor(admin: ReturnType<typeof createClient>, id: string): Promise<MasjidTimes | null> {
+  const { data } = await admin.from('masjid_corrections').select('times, updated_at').eq('osm_id', id).maybeSingle();
+  if (!data) return null;
+  const t = normalizeTimes(data.times, null);
+  if (!t.found) return null;
+  const day = new Date(data.updated_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return { ...t, source: 'community', note: `Corrected by an app user on ${day}` };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -110,10 +122,37 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => null);
   const id = typeof body?.id === 'string' ? body.id.slice(0, 64) : '';
-  const website = typeof body?.website === 'string' ? body.website.slice(0, 300) : '';
+  const website = typeof body?.website === 'string' && body.website ? body.website.slice(0, 300) : null;
   const name = typeof body?.name === 'string' ? body.name.slice(0, 120) : 'Masjid';
   const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date ?? '') ? body.date : new Date().toISOString().slice(0, 10);
-  if (!/^((node|way|relation)\/\d+|site\/[a-z0-9-]{1,36}|tt\/[A-Za-z0-9_-]{1,60})$/.test(id) || !isSafeUrl(website)) return json({ error: 'Unknown masjid.' }, 400);
+  if (!/^((node|way|relation)\/\d+|site\/[a-z0-9-]{1,36}|tt\/[A-Za-z0-9_-]{1,60})$/.test(id)) return json({ error: 'Unknown masjid.' }, 400);
+  if (website && !isSafeUrl(website)) return json({ error: 'Unknown masjid.' }, 400);
+
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+
+  // Someone fixing this masjid's times for everyone.
+  if (body?.correction) {
+    const times = normalizeTimes({ ...body.correction, found: true }, null);
+    if (!times.found) return json({ error: 'Add at least one time.' }, 400);
+    const { count } = await admin
+      .from('masjid_corrections')
+      .select('osm_id', { count: 'exact', head: true })
+      .eq('updated_by', auth.user.id)
+      .gte('updated_at', since);
+    if ((count ?? 0) >= DAILY_CORRECTIONS) return json({ error: 'Try again tomorrow.' }, 429);
+    await admin.from('masjid_corrections').upsert({
+      osm_id: id,
+      name,
+      times: { iqamah: times.iqamah, jumuah: times.jumuah },
+      updated_by: auth.user.id,
+      updated_at: new Date().toISOString(),
+    });
+    return json(await correctionFor(admin, id));
+  }
+
+  const corrected = await correctionFor(admin, id);
+  if (corrected) return json(corrected);
+  if (!website) return json(EMPTY);
 
   const { data: cached } = await admin.from('masjid_times').select('result, for_date, website').eq('osm_id', id).maybeSingle();
   if (cached && cached.for_date === date && cached.website === website) return json(cached.result);
@@ -121,7 +160,6 @@ Deno.serve(async (req) => {
   const key = Deno.env.get('GEMINI_API_KEY');
   if (!key) return json({ error: 'Reading masjid websites is not set up yet.' }, 503);
 
-  const since = new Date(Date.now() - 86_400_000).toISOString();
   const { count } = await admin
     .from('masjid_times')
     .select('osm_id', { count: 'exact', head: true })
