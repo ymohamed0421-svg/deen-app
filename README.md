@@ -40,7 +40,10 @@ npx supabase link --project-ref xkfpcpdbqqratcaqxktl        # asks for the datab
 npx supabase db push --remote --include-seed                # tables, security rules and lesson content
 npx supabase functions deploy complete-lesson --remote=xkfpcpdbqqratcaqxktl
 npx supabase functions deploy ask --remote=xkfpcpdbqqratcaqxktl
+npx supabase functions deploy masjid-times --remote=xkfpcpdbqqratcaqxktl   # reads masjid websites for iqamah times (uses GEMINI_API_KEY)
+npx supabase functions deploy nearby-masjids --remote=xkfpcpdbqqratcaqxktl  # finds masjids with TomTom (uses TOMTOM_API_KEY)
 npx supabase secrets set GEMINI_API_KEY=your-key            # optional: free key from aistudio.google.com/apikey for AI answers
+npx supabase secrets set TOMTOM_API_KEY=your-key            # optional: free key from developer.tomtom.com for the masjid finder
 ```
 
 Then turn on **Anonymous sign-ins** in the Supabase dashboard (Authentication > Sign In / Providers). After changing lesson files, run `npm run seed` to regenerate `supabase/seed.sql`.
