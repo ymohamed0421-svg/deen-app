@@ -52,6 +52,7 @@ export type Settings = {
   reciter: string;
   prayerReminders: boolean;
   myMasjids: MyMasjid[];
+  kidsMode: boolean; // simpler lessons, bigger pictures and a gentler pace
   favoriteMasjid: FavoriteMasjid | null;
   favoriteTimes: FavoriteTimes | null;
   iqamahReminders: boolean;
@@ -70,6 +71,7 @@ const DEFAULTS: Settings = {
   reciter: DEFAULT_RECITER,
   prayerReminders: false,
   myMasjids: [],
+  kidsMode: false,
   favoriteMasjid: null,
   favoriteTimes: null,
   iqamahReminders: false,
