@@ -109,11 +109,11 @@ Deno.serve(async (req) => {
   if (!auth.user) return json({ error: 'Please sign in.' }, 401);
 
   const body = await req.json().catch(() => null);
-  const id = typeof body?.id === 'string' ? body.id.slice(0, 41) : '';
+  const id = typeof body?.id === 'string' ? body.id.slice(0, 64) : '';
   const website = typeof body?.website === 'string' ? body.website.slice(0, 300) : '';
   const name = typeof body?.name === 'string' ? body.name.slice(0, 120) : 'Masjid';
   const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date ?? '') ? body.date : new Date().toISOString().slice(0, 10);
-  if (!/^((node|way|relation)\/\d+|site\/[a-z0-9-]{1,36})$/.test(id) || !isSafeUrl(website)) return json({ error: 'Unknown masjid.' }, 400);
+  if (!/^((node|way|relation)\/\d+|site\/[a-z0-9-]{1,36}|tt\/[A-Za-z0-9_-]{1,60})$/.test(id) || !isSafeUrl(website)) return json({ error: 'Unknown masjid.' }, 400);
 
   const { data: cached } = await admin.from('masjid_times').select('result, for_date, website').eq('osm_id', id).maybeSingle();
   if (cached && cached.for_date === date && cached.website === website) return json(cached.result);

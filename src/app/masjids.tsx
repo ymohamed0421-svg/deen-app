@@ -5,7 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
-import { distanceKm, findNearbyMasjids, formatDistance, mapLinks, type Masjid } from '../lib/masjids';
+import { fetchPlaceMasjids } from '../lib/nearbyMasjids';
+import { distanceKm, findNearbyMasjids, formatDistance, mergeMasjids, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
 import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
 import { colors } from '../theme';
@@ -50,10 +51,29 @@ export default function MasjidsScreen() {
     const origin = useSaved ? fromSaved : ((await currentPosition()) ?? fromSaved);
     if (!origin) return setState({ kind: 'no-location' });
     setState({ kind: 'loading', step: 'Finding masjids near you…' });
+    const remember = (masjids: Masjid[]) =>
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ latitude: origin.latitude, longitude: origin.longitude, masjids })).catch(() => {});
+
+    // Fast path: TomTom's data through our server (about a second). OpenStreetMap then fills in
+    // any it lacks, in the background, without making anyone wait.
+    const places = await fetchPlaceMasjids(origin.latitude, origin.longitude);
+    if (places && places.length > 0) {
+      setState({ kind: 'done', origin, masjids: places.slice(0, 30) });
+      remember(places.slice(0, 30));
+      findNearbyMasjids(origin.latitude, origin.longitude)
+        .then((osm) => {
+          const merged = mergeMasjids(places, osm).slice(0, 30);
+          setState((s) => (s.kind === 'done' && s.origin === origin ? { ...s, masjids: merged } : s));
+          remember(merged);
+        })
+        .catch(() => {});
+      return;
+    }
+
     try {
       const masjids = await findNearbyMasjids(origin.latitude, origin.longitude);
       setState({ kind: 'done', origin, masjids });
-      AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ latitude: origin.latitude, longitude: origin.longitude, masjids })).catch(() => {});
+      remember(masjids);
     } catch {
       // The free map servers are sometimes busy: fall back to the last list found near here.
       const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);

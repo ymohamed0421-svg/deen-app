@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildQuery, isMasjid, formatDistance, mapLinks, parseOverpass, type OsmElement } from './masjids.ts';
+import { buildQuery, isMasjid, mergeMasjids, formatDistance, mapLinks, parseOverpass, type OsmElement } from './masjids.ts';
 
 test('builds an Overpass query for mosques around a point', () => {
   const q = buildQuery(38.7849, -77.1872, 10000);
@@ -42,4 +42,14 @@ test('map links and distances', () => {
   assert.match(l.apple, /^https:\/\/maps\.apple\.com\/\?q=Dar%20Al-Hijrah&ll=38\.86,-77\.14$/);
   assert.equal(formatDistance(1.609344, 'en-US'), '1.0 mi');
   assert.equal(formatDistance(12.4, 'en-CA'), '12 km');
+});
+
+test('merging adds only masjids the first list lacks', () => {
+  const base = { address: null, website: null, phone: null, serviceTimes: null };
+  const a = [{ ...base, id: 'tt/1', name: 'PEACE Islamic Center', latitude: 38.79, longitude: -77.27, km: 1 }];
+  const b = [
+    { ...base, id: 'node/1', name: 'Peace Center', latitude: 38.7905, longitude: -77.2705, km: 1.05 },
+    { ...base, id: 'node/2', name: 'Masjid Al-Noor', latitude: 38.8, longitude: -77.2, km: 0.5 },
+  ];
+  assert.deepEqual(mergeMasjids(a, b).map((m) => m.id), ['node/2', 'tt/1']);
 });
