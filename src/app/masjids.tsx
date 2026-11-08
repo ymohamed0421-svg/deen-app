@@ -11,17 +11,24 @@ import { colors } from '../theme';
 
 type Origin = { latitude: number; longitude: number; fromGps: boolean };
 type State =
-  | { kind: 'loading' }
+  | { kind: 'loading'; step: string }
   | { kind: 'no-location' }
   | { kind: 'error'; origin: Origin }
   | { kind: 'done'; origin: Origin; masjids: Masjid[] };
 
+function within<T>(ms: number, p: Promise<T>): Promise<T | null> {
+  return Promise.race([p, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
+/** The phone's position, or null after 12 seconds (some browsers never answer if the prompt is ignored). */
 async function currentPosition(): Promise<Origin | null> {
   try {
-    const perm = await Location.requestForegroundPermissionsAsync();
-    if (!perm.granted) return null;
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude, fromGps: true };
+    const perm = await within(20_000, Location.requestForegroundPermissionsAsync());
+    if (!perm?.granted) return null;
+    const pos =
+      (await within(12_000, Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }))) ??
+      (await within(3_000, Location.getLastKnownPositionAsync()).catch(() => null));
+    return pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude, fromGps: true } : null;
   } catch {
     return null;
   }
@@ -29,14 +36,16 @@ async function currentPosition(): Promise<Origin | null> {
 
 export default function MasjidsScreen() {
   const { settings } = useSettings();
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  const [state, setState] = useState<State>({ kind: 'loading', step: 'Getting your location…' });
   const [now] = useState(() => new Date());
 
-  const load = useCallback(async () => {
-    setState({ kind: 'loading' });
+  const load = useCallback(async (useSaved = false) => {
+    setState({ kind: 'loading', step: useSaved ? 'Finding masjids near you…' : 'Getting your location…' });
     const saved = settings.location;
-    const origin = (await currentPosition()) ?? (saved ? { latitude: saved.latitude, longitude: saved.longitude, fromGps: false } : null);
+    const fromSaved = saved ? { latitude: saved.latitude, longitude: saved.longitude, fromGps: false } : null;
+    const origin = useSaved ? fromSaved : ((await currentPosition()) ?? fromSaved);
     if (!origin) return setState({ kind: 'no-location' });
+    setState({ kind: 'loading', step: 'Finding masjids near you…' });
     try {
       setState({ kind: 'done', origin, masjids: await findNearbyMasjids(origin.latitude, origin.longitude) });
     } catch {
@@ -52,7 +61,12 @@ export default function MasjidsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.green} size="large" />
-        <Text style={styles.muted}>Finding masjids near you…</Text>
+        <Text style={styles.muted}>{state.step}</Text>
+        {settings.location && state.step.startsWith('Getting') && (
+          <Pressable onPress={() => load(true)} style={{ marginTop: 8 }}>
+            <Text style={styles.chipText}>Use {settings.location.name} instead</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -62,7 +76,7 @@ export default function MasjidsScreen() {
       <View style={[styles.center, { padding: 24 }]}>
         <Text style={styles.big}>📍</Text>
         <Text style={styles.text}>Allow location, or set your city, to see the masjids closest to you.</Text>
-        <Button title="Try again" onPress={load} style={{ alignSelf: 'stretch' }} />
+        <Button title="Try again" onPress={() => load()} style={{ alignSelf: 'stretch' }} />
         <Button title="Set my city" variant="outline" onPress={() => router.push('/location')} style={{ alignSelf: 'stretch' }} />
       </View>
     );
@@ -101,7 +115,7 @@ export default function MasjidsScreen() {
       {state.kind === 'error' && (
         <View style={styles.card}>
           <Text style={styles.text}>Couldn’t load masjids right now. Check your connection and try again.</Text>
-          <Button title="Try again" onPress={load} />
+          <Button title="Try again" onPress={() => load()} />
         </View>
       )}
 
