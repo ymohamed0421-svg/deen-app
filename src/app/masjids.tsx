@@ -132,7 +132,16 @@ export default function MasjidsScreen() {
       {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} />)}
 
       {state.kind === 'done' && state.masjids.length > 0 && (
-        <Text style={styles.credit}>Masjid list from OpenStreetMap contributors. A masjid missing? It can be added at openstreetmap.org.</Text>
+        <View style={{ gap: 8, marginTop: 8 }}>
+          <Chip
+            label="Don’t see your masjid? Search Google Maps"
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/mosque/@${origin.latitude},${origin.longitude},12z`).catch(() => {})}
+          />
+          <Text style={styles.credit}>
+            Masjid list from OpenStreetMap, a free map anyone can edit. Add a missing masjid at openstreetmap.org and it shows here for
+            everyone within a day.
+          </Text>
+        </View>
       )}
     </ScrollView>
   );

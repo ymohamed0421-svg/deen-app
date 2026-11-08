@@ -32,7 +32,16 @@ const ENDPOINTS = [
 
 export function buildQuery(latitude: number, longitude: number, radiusMeters: number) {
   const around = `(around:${Math.round(radiusMeters)},${latitude.toFixed(5)},${longitude.toFixed(5)})`;
-  return `[out:json][timeout:25];nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};out center tags 80;`;
+  // Many masjids are mapped without religion=muslim, or as a community centre, so also match by name.
+  const named = '["name"~"masjid|mosque|islamic cent|islamic soc|musall|jamia|jame|muslim community",i]';
+  return (
+    `[out:json][timeout:25];(` +
+    `nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};` +
+    `nwr["building"="mosque"]${around};` +
+    `nwr${named}["amenity"~"place_of_worship|community_centre|social_centre"]${around};` +
+    `nwr${named}["building"]${around};` +
+    `);out center tags 120;`
+  );
 }
 
 export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
