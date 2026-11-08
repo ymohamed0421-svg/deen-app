@@ -281,3 +281,12 @@ export function levelFromNoor(noor: number): { level: number; into: number; need
   }
   return { level, into: remaining, needed };
 }
+
+// ---------- bonus Noor (outside lessons, e.g. praying at a masjid) ----------
+
+/** Adds Noor earned outside a lesson, keeping the weekly League count in step. */
+export function addBonusNoor(state: GameState, noor: number, today: string): GameState {
+  const week = mondayOf(today);
+  const weeklyNoor = (week === state.weekStart ? state.weeklyNoor : 0) + noor;
+  return { ...state, noor: state.noor + noor, weeklyNoor, weekStart: week };
+}
