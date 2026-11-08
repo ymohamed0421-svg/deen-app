@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble, greetingLine } from '../../components/Fanous';
 import { StatsBar } from '../../components/StatsBar';
@@ -10,7 +10,7 @@ import { isDone, isUnlocked, nextLessonId, unitDone } from '../../game/progress'
 import { DailyCard } from '../../components/DailyCard';
 import { useGame } from '../../state/GameProvider';
 import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 // Nodes wind left and right like a garden path.
 const OFFSETS = [0, 50, 70, 40, -10, -60, -70, -40];
@@ -80,7 +80,7 @@ export default function PathScreen() {
                     style={({ pressed }) => [
                       styles.node,
                       { backgroundColor: done ? colors.gold : open ? unit.color : colors.locked },
-                      { borderBottomColor: done ? '#B9861F' : open ? '#00000040' : '#BDB6A8' },
+                      { borderBottomColor: done ? '#B9861F' : open ? '#00000040' : colors.lockedDark },
                       current && styles.nodeCurrent,
                       pressed && { transform: [{ translateY: 3 }], borderBottomWidth: 3 },
                     ]}
@@ -132,7 +132,7 @@ function FeatureCard({ icon, title, text, onPress }: { icon: string; title: stri
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   feature: { flex: 1, padding: 12, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
   featureIcon: { fontSize: 24, color: colors.blue, fontWeight: '700' },
   featureTitle: { fontWeight: '900', color: colors.ink, fontSize: 16, marginTop: 4 },
@@ -182,4 +182,4 @@ const styles = StyleSheet.create({
   comingTitle: { fontWeight: '800', color: colors.ink, fontSize: 16 },
   comingText: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   draftNote: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 16 },
-});
+}));

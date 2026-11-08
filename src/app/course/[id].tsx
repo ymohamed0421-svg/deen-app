@@ -1,10 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { CoursePath } from '../../components/CoursePath';
 import { Fanous, SpeechBubble } from '../../components/Fanous';
 import { findCourse } from '../../content/courses';
 import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 const INTRO: Record<string, string> = {
   arabic: 'Never read Arabic before? No problem. We’ll go a few letters at a time until you can read words from the Quran.',
@@ -30,9 +30,9 @@ export default function CourseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16, paddingBottom: 48 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   note: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 24 },
-});
+}));

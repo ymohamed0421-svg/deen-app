@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { Course } from '../content/types';
 import { courseLessonOpen, courseNextLesson, isDone } from '../game/progress';
 import { useGame } from '../state/GameProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 /** A course's lessons as a list of cards that open one after another. `big` is for Kids mode. */
 export function CoursePath({ course, big = false }: { course: Course; big?: boolean }) {
@@ -65,7 +65,7 @@ export function CoursePath({ course, big = false }: { course: Course; big?: bool
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   track: { flex: 1, height: 12, borderRadius: 6, backgroundColor: colors.line, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.gold },
@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
   artText: { fontSize: 26, color: colors.ink },
   lessonTitle: { fontWeight: '800', fontSize: 16, color: colors.ink },
   tag: { fontWeight: '900', fontSize: 11, letterSpacing: 1, marginTop: 2 },
-  done: { color: '#9A6B12', fontWeight: '800', fontSize: 12, marginTop: 2 },
+  done: { color: colors.goldInk, fontWeight: '800', fontSize: 12, marginTop: 2 },
   kidsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   kidsCard: { width: '47%', flexGrow: 1, alignItems: 'center', gap: 8, padding: 14, borderRadius: 24, backgroundColor: colors.card, borderWidth: 3, borderBottomWidth: 6, borderColor: colors.line },
   kidsArt: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   kidsArtText: { fontSize: 54 },
   kidsTitle: { fontSize: 18, textAlign: 'center' },
-});
+}));

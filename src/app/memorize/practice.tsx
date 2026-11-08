@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Fanous, SpeechBubble } from '../../components/Fanous';
 import { loadSurah } from '../../quran/load';
@@ -9,7 +9,7 @@ import { SURAHS } from '../../quran/surahs';
 import { useGame } from '../../state/GameProvider';
 import { gradeAyah, useMemorizeStore } from '../../state/memorizeStore';
 import { useRecitation } from '../../state/RecitationProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 type Item = { surah: number; index: number };
 type Phase = 'setup' | 'recite' | 'done';
@@ -276,7 +276,7 @@ function Stepper({ label, value, onMove }: { label: string; value: number; onMov
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 20, paddingBottom: 48, flexGrow: 1 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
@@ -307,4 +307,4 @@ const styles = StyleSheet.create({
   stepValue: { minWidth: 40, textAlign: 'center', fontSize: 20, fontWeight: '900', color: colors.green },
   stepBtn: { minWidth: 38, height: 38, paddingHorizontal: 6, borderRadius: 12, borderWidth: 2, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   stepBtnText: { fontWeight: '800', color: colors.ink },
-});
+}));

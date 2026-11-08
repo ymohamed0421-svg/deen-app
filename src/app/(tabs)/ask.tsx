@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous } from '../../components/Fanous';
 import { CONFIDENT_MATCH, FAQ, FAQ_TOPICS, searchFaq, type Faq, type FaqTopic } from '../../content/faq';
 import { askAvailable, askQuestion, type ChatTurn } from '../../lib/ask';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 type Turn =
   | { role: 'user'; content: string }
@@ -167,7 +167,7 @@ export default function AskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.ink },
   note: { color: colors.muted, lineHeight: 20 },
@@ -190,4 +190,4 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 2, borderTopColor: colors.line, backgroundColor: colors.bg, alignItems: 'flex-end' },
   input: { flex: 1, maxHeight: 120, padding: 12, borderRadius: 16, borderWidth: 2, borderColor: colors.line, backgroundColor: colors.card, fontSize: 16, color: colors.ink },
   send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-});
+}));

@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme';
+import { Text, View } from 'react-native';
+import { colors, themed } from '../theme';
 
 export type FanousMood = 'happy' | 'cheer' | 'worried' | 'sleepy';
 
@@ -76,7 +76,7 @@ export function SpeechBubble({ text }: { text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   ring: { borderColor: colors.gold, backgroundColor: 'transparent' },
   band: { backgroundColor: '#C98F22' },
   body: {
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   bubbleText: { color: colors.ink, fontSize: 15, lineHeight: 21 },
-});
+}));
 
 // ---------- what Fanous says ----------
 // Playful about the app and the streak. Never about anyone's worship or faith.

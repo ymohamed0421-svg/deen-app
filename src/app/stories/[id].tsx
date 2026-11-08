@@ -1,8 +1,8 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 import { Button } from '../../components/Button';
 import { findLesson } from '../../content/units';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,9 +25,9 @@ export default function StoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   kicker: { fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   title: { fontSize: 28, fontWeight: '900', color: colors.ink },
   body: { fontSize: 17, lineHeight: 27, color: colors.ink },
   note: { color: colors.muted, fontSize: 12, textAlign: 'center' },
-});
+}));

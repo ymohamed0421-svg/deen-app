@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Fanous, SpeechBubble } from '../../components/Fanous';
 import { dueKeys, parseKey, surahProgress, weakKeys } from '../../quran/memorize';
 import { SURAHS } from '../../quran/surahs';
 import { useGame } from '../../state/GameProvider';
 import { useMemorizeStore } from '../../state/memorizeStore';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 // Short surahs most people learn first, for a quick start.
 const STARTERS = [1, 112, 113, 114, 108, 103];
@@ -87,7 +87,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16, paddingBottom: 48 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
@@ -106,4 +106,4 @@ const styles = StyleSheet.create({
   starter: { width: '31%', flexGrow: 1, alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: colors.card, borderWidth: 2, borderBottomWidth: 4, borderColor: colors.line },
   starterArabic: { fontSize: 22, color: colors.green },
   starterName: { fontWeight: '800', color: colors.ink, marginTop: 4 },
-});
+}));

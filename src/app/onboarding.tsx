@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Fanous, SpeechBubble } from '../components/Fanous';
 import { LevelPicker } from '../components/LevelPicker';
 import { useSettings, type KnowledgeLevel } from '../state/SettingsProvider';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export default function Onboarding() {
   const { settings, update } = useSettings();
@@ -49,7 +49,7 @@ export default function Onboarding() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 20, gap: 16 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
@@ -64,9 +64,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderColor: colors.line,
   },
-  optionSelected: { borderColor: colors.green, backgroundColor: '#EEF8F2' },
+  optionSelected: { borderColor: colors.green, backgroundColor: colors.greenLight },
   icon: { fontSize: 34 },
   title: { fontSize: 18, fontWeight: '900', color: colors.ink },
   text: { color: colors.muted, marginTop: 2, lineHeight: 20 },
   note: { color: colors.muted, textAlign: 'center' },
-});
+}));

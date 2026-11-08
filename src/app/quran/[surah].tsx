@@ -1,12 +1,12 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { loadSurah } from '../../quran/load';
 import { RECITERS } from '../../quran/reciters';
 import { SURAHS } from '../../quran/surahs';
 import { useRecitation, type LoopMode } from '../../state/RecitationProvider';
 import { useSettings } from '../../state/SettingsProvider';
-import { colors } from '../../theme';
+import { colors, themed } from '../../theme';
 
 const LOOP_LABEL: Record<LoopMode, string> = { off: 'Loop off', ayah: 'Loop ayah', range: 'Loop range', surah: 'Loop surah' };
 const NEXT_LOOP: Record<LoopMode, LoopMode> = { off: 'ayah', ayah: 'surah', range: 'off', surah: 'off' };
@@ -270,7 +270,7 @@ function StepBtn({ text, onPress, label }: { text: string; onPress: () => void; 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { alignItems: 'center', padding: 20, gap: 6 },
   headerArabic: { fontSize: 36, color: colors.green },
@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
   smallToggle: { marginTop: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.line },
   smallToggleText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
   ayah: { paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.line },
-  ayahActive: { backgroundColor: '#EEF8F2' },
-  ayahInRange: { backgroundColor: '#FBF6EA' },
+  ayahActive: { backgroundColor: colors.greenLight },
+  ayahInRange: { backgroundColor: colors.cream },
   smallToggleOn: { backgroundColor: colors.gold, borderColor: colors.gold },
   sheetHint: { color: colors.muted, marginBottom: 12, lineHeight: 20 },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   stopLoop: { alignItems: 'center', paddingVertical: 12 },
   ayahTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   badge: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontWeight: '800', color: '#9A6B12', fontSize: 12 },
+  badgeText: { fontWeight: '800', color: colors.goldInk, fontSize: 12 },
   iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   iconBtnOn: { backgroundColor: colors.goldLight, borderColor: colors.gold },
   iconBtnText: { fontSize: 15 },
@@ -330,10 +330,10 @@ const styles = StyleSheet.create({
   loopText: { fontWeight: '800', fontSize: 12, color: colors.ink },
   playBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   playText: { color: '#fff', fontSize: 22 },
-  backdrop: { flex: 1, backgroundColor: '#0006' },
+  backdrop: { flex: 1, backgroundColor: colors.overlay },
   sheet: { maxHeight: '60%', backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16 },
   sheetTitle: { fontSize: 20, fontWeight: '900', color: colors.ink, marginBottom: 10 },
   reciter: { flexDirection: 'row', justifyContent: 'space-between', padding: 14, borderRadius: 12 },
-  reciterOn: { backgroundColor: '#EEF8F2' },
+  reciterOn: { backgroundColor: colors.greenLight },
   reciterName: { fontSize: 16, color: colors.ink, fontWeight: '600' },
-});
+}));
