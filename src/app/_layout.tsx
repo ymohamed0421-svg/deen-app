@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Fragment } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { FriendSync } from '../components/FriendSync';
 import { ReminderSync } from '../components/ReminderSync';
 import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
@@ -20,6 +21,7 @@ export default function RootLayout() {
           <RecitationProvider>
           <ReminderSync />
           <ThemedApp />
+          <FriendSync />
           <TravelCheck />
           </RecitationProvider>
           </WorshipProvider>
@@ -71,6 +73,7 @@ function ThemedApp() {
         <Stack.Screen name="ramadan" options={{ headerShown: true, title: 'Ramadan' }} />
         <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
         <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
+        <Stack.Screen name="friends" options={{ headerShown: true, title: 'Friends' }} />
       </Stack>
     </Fragment>
   );

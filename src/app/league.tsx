@@ -1,4 +1,5 @@
-import { ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fanous, SpeechBubble } from '../components/Fanous';
 import { StatsBar } from '../components/StatsBar';
@@ -34,12 +35,10 @@ export default function LeagueScreen() {
           <Text style={styles.cardText}>Week starting {state.weekStart}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Friends and Study Circles</Text>
-          <Text style={styles.cardText}>
-            Follow friends, keep a Companion Streak together, and set a shared weekly goal in a Study Circle. These turn on once accounts are connected to Supabase.
-          </Text>
-        </View>
+        <Pressable style={styles.card} onPress={() => router.push('/friends')}>
+          <Text style={styles.cardTitle}>Streak buddies ›</Text>
+          <Text style={styles.cardText}>Add friends with a code, keep a buddy streak going together, and nudge each other to pray and study.</Text>
+        </Pressable>
 
         <View style={styles.fanousRow}>
           <Fanous size={60} />

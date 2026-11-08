@@ -7,6 +7,7 @@ import { useSettings, type ThemeChoice } from '../../state/SettingsProvider';
 import { colors, themed } from '../../theme';
 
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
+  { icon: '🤝', title: 'Friends', text: 'Streak buddies, friend codes and nudges', href: '/friends' },
   { icon: '🧠', title: 'Memorize the Quran', text: 'Recite from memory and review weak ayahs', href: '/memorize' },
   { icon: '📖', title: 'Read Arabic', text: 'Learn the letters and read the Quran from zero', href: '/course/arabic' },
   { icon: '📿', title: 'Dhikr', text: 'Tasbih counter and morning and evening adhkar', href: '/dhikr' },
