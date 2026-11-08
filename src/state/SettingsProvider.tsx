@@ -25,6 +25,9 @@ export type CalcMethodId =
   | 'Tehran'
   | 'MoonsightingCommittee';
 
+/** A masjid the user saved by hand, for ones the free map is missing. */
+export type MyMasjid = { id: string; name: string; place: string; website: string | null };
+
 export type Settings = {
   level: KnowledgeLevel | null; // null until the user picks one in onboarding
   location: SavedLocation | null;
@@ -32,6 +35,7 @@ export type Settings = {
   asrMadhab: 'shafi' | 'hanafi'; // shafi = Shafi'i, Maliki and Hanbali (shadow length 1), hanafi = shadow length 2
   reciter: string;
   prayerReminders: boolean;
+  myMasjids: MyMasjid[];
 };
 
 const DEFAULTS: Settings = {
@@ -41,6 +45,7 @@ const DEFAULTS: Settings = {
   asrMadhab: 'shafi',
   reciter: DEFAULT_RECITER,
   prayerReminders: false,
+  myMasjids: [],
 };
 
 const KEY = 'deen-app/settings/v1';
