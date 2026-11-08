@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ReminderSync } from '../components/ReminderSync';
+import { TravelCheck } from '../components/TravelCheck';
 import { GameProvider } from '../state/GameProvider';
 import { RecitationProvider } from '../state/RecitationProvider';
 import { SettingsProvider, useSettings } from '../state/SettingsProvider';
@@ -17,6 +18,7 @@ export default function RootLayout() {
           <RecitationProvider>
           <ReminderSync />
           <ThemedApp />
+          <TravelCheck />
           </RecitationProvider>
         </GameProvider>
       </SettingsProvider>
@@ -58,6 +60,7 @@ function ThemedApp() {
         <Stack.Screen name="stories/[id]" options={{ headerShown: true, title: '' }} />
         <Stack.Screen name="zakat" options={{ headerShown: true, title: 'Zakat calculator' }} />
         <Stack.Screen name="masjids" options={{ headerShown: true, title: 'Masjids near you' }} />
+        <Stack.Screen name="halal" options={{ headerShown: true, title: 'Halal food nearby' }} />
         <Stack.Screen name="location" options={{ headerShown: true, title: 'Your location', presentation: 'modal' }} />
       </Stack>
     </Fragment>

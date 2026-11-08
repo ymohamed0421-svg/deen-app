@@ -28,6 +28,22 @@ export type CalcMethodId =
 /** A masjid the user saved by hand, for ones the free map is missing. */
 export type MyMasjid = { id: string; name: string; place: string; website: string | null };
 
+/** The masjid the user starred, with the iqamah times last read for it. */
+export type FavoriteMasjid = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  address: string | null;
+  website: string | null;
+  phone: string | null;
+};
+export type FavoriteTimes = {
+  iqamah: Record<'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha', string | null>;
+  jumuah: string[];
+  savedAt: string;
+};
+
 export type Settings = {
   level: KnowledgeLevel | null; // null until the user picks one in onboarding
   location: SavedLocation | null;
@@ -36,6 +52,10 @@ export type Settings = {
   reciter: string;
   prayerReminders: boolean;
   myMasjids: MyMasjid[];
+  favoriteMasjid: FavoriteMasjid | null;
+  favoriteTimes: FavoriteTimes | null;
+  iqamahReminders: boolean;
+  iqamahLeadMinutes: number;
   theme: ThemeChoice;
 };
 
@@ -50,6 +70,10 @@ const DEFAULTS: Settings = {
   reciter: DEFAULT_RECITER,
   prayerReminders: false,
   myMasjids: [],
+  favoriteMasjid: null,
+  favoriteTimes: null,
+  iqamahReminders: false,
+  iqamahLeadMinutes: 15,
   theme: 'system',
 };
 

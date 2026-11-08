@@ -2,13 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
-import { fetchMasjidTimes, masjidTimesAvailable, type MasjidTimes } from '../lib/masjidTimes';
-import { fetchPlaceMasjids } from '../lib/nearbyMasjids';
+import { CHECKIN_KM, CHECKIN_NOOR, checkIn, checkedIn } from '../lib/checkins';
+import { prayerSlot, sortByJumuah } from '../lib/clock';
+import { fetchMasjidTimes, masjidTimesAvailable, submitCorrection, type MasjidTimes } from '../lib/masjidTimes';
+import { requestReminderPermission } from '../lib/reminders';
+import { fetchPlaceMasjids, searchMasjidsByName } from '../lib/nearbyMasjids';
 import { distanceKm, findNearbyMasjids, formatDistance, mergeMasjids, mapLinks, type Masjid } from '../lib/masjids';
 import { PRAYERS, PRAYER_LABELS, formatTime, nextPrayer, prayerTimes } from '../lib/prayer';
-import { useSettings, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
+import { useGame } from '../state/GameProvider';
+import { useSettings, type FavoriteMasjid, type MyMasjid, type SavedLocation } from '../state/SettingsProvider';
 import { colors, themed } from '../theme';
 
 type Origin = { latitude: number; longitude: number; fromGps: boolean };
@@ -145,6 +149,16 @@ export default function MasjidsScreen() {
         </Text>
       </View>
 
+      <FavoriteSection origin={origin} />
+
+      <MasjidSearch origin={origin} />
+
+      <View style={styles.actions}>
+        <Chip label="🍽️ Halal food nearby" onPress={() => router.push('/halal')} />
+      </View>
+
+      {state.kind === 'done' && state.masjids.length > 0 && <JumuahFinder masjids={state.masjids} now={now} />}
+
       <MyMasjids />
 
       {state.kind === 'error' && (
@@ -174,7 +188,7 @@ export default function MasjidsScreen() {
         </Pressable>
       )}
 
-      {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} />)}
+      {state.kind === 'done' && state.masjids.map((m, i) => <MasjidCard key={m.id} masjid={m} auto={i < 3} atMasjid={origin.fromGps && m.km < CHECKIN_KM} />)}
 
       {state.kind === 'done' && state.masjids.length > 0 && (
         <View style={{ gap: 8, marginTop: 8 }}>
@@ -192,8 +206,19 @@ export default function MasjidsScreen() {
   );
 }
 
-function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
-  const { settings } = useSettings();
+function MasjidCard({ masjid: m, auto, atMasjid = false }: { masjid: Masjid; auto: boolean; atMasjid?: boolean }) {
+  const { settings, update } = useSettings();
+  const isFavorite = settings.favoriteMasjid?.id === m.id;
+  const toggleFavorite = () => {
+    if (isFavorite) return update({ favoriteMasjid: null, favoriteTimes: null, iqamahReminders: false });
+    const fav: FavoriteMasjid = { id: m.id, name: m.name, latitude: m.latitude, longitude: m.longitude, address: m.address, website: m.website, phone: m.phone };
+    update({ favoriteMasjid: fav, favoriteTimes: null });
+  };
+  const onTimes = (t: MasjidTimes) => {
+    if (!isFavorite || !t.found) return;
+    const same = JSON.stringify(settings.favoriteTimes?.iqamah) === JSON.stringify(t.iqamah) && JSON.stringify(settings.favoriteTimes?.jumuah) === JSON.stringify(t.jumuah);
+    if (!same) update({ favoriteTimes: { iqamah: t.iqamah, jumuah: t.jumuah, savedAt: new Date().toISOString() } });
+  };
   const links = mapLinks(m);
   const next = nextPrayer({ latitude: m.latitude, longitude: m.longitude, name: m.name, auto: false }, settings);
   const preferApple = Platform.OS === 'ios';
@@ -217,11 +242,14 @@ function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
         </Text>
       </View>
       {m.serviceTimes && <Text style={styles.address}>Listed times: {m.serviceTimes}</Text>}
-      {m.website && masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto={auto} />}
+      {masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto={auto || isFavorite} onTimes={onTimes} />}
+      {atMasjid && <CheckIn masjid={m} />}
 
       <View style={styles.actions}>
+        <Chip label={isFavorite ? '★ My masjid' : '☆ Make my masjid'} onPress={toggleFavorite} />
         <Chip label="Apple Maps" onPress={() => open(links.apple)} />
         <Chip label="Google Maps" onPress={() => open(links.google)} />
+        <Chip label="Waze" onPress={() => open(links.waze)} />
         {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
         {m.phone && <Chip label="Call" onPress={() => open(`tel:${m.phone!.replace(/[^\d+]/g, '')}`)} />}
       </View>
@@ -231,37 +259,83 @@ function MasjidCard({ masjid: m, auto }: { masjid: Masjid; auto: boolean }) {
 
 const IQAMAH_ROWS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
-/** The masjid's own iqamah and Jumu'ah times, read off its website. */
-function WebsiteTimes({ masjid: m, website, auto }: { masjid: { id: string; name: string }; website: string; auto: boolean }) {
+/** The masjid's own iqamah and Jumu'ah times: fixed by an app user, or read off its website. */
+function WebsiteTimes({
+  masjid: m,
+  website,
+  auto,
+  onTimes,
+}: {
+  masjid: { id: string; name: string };
+  website: string | null;
+  auto: boolean;
+  onTimes?: (t: MasjidTimes) => void;
+}) {
   const [state, setState] = useState<'idle' | 'loading' | 'failed' | MasjidTimes>(auto ? 'loading' : 'idle');
+  const [fixing, setFixing] = useState(false);
+
+  const show = useCallback(
+    (t: MasjidTimes) => {
+      setState(t);
+      onTimes?.(t);
+    },
+    [onTimes],
+  );
 
   const load = useCallback(() => {
     setState('loading');
     fetchMasjidTimes({ id: m.id, name: m.name, website })
-      .then(setState)
+      .then(show)
       .catch(() => setState('failed'));
-  }, [m.id, m.name, website]);
+  }, [m.id, m.name, website]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (auto) load();
   }, [auto, load]);
 
-  if (state === 'idle') return <Chip label="⏱ Get times from its website" onPress={load} />;
+  const current = typeof state === 'object' ? state : null;
+  const form = fixing && (
+    <FixTimes
+      masjid={m}
+      start={current}
+      onDone={(t) => {
+        setFixing(false);
+        if (t) show(t);
+      }}
+    />
+  );
+
+  if (state === 'idle') {
+    return (
+      <View style={styles.actions}>
+        <Chip label={website ? '⏱ Get times from its website' : '⏱ Check for iqamah times'} onPress={load} />
+        {form || <Chip label="✏️ Add its times" onPress={() => setFixing(true)} />}
+      </View>
+    );
+  }
   if (state === 'loading') {
     return (
       <View style={styles.siteRow}>
         <ActivityIndicator color={colors.green} />
-        <Text style={styles.address}>Reading the masjid’s website…</Text>
+        <Text style={styles.address}>{website ? 'Reading the masjid’s website…' : 'Checking for times…'}</Text>
       </View>
     );
   }
   if (state === 'failed' || !state.found) {
-    return <Text style={styles.address}>Its website doesn’t list times we could read. Tap Website or Call to check.</Text>;
+    return (
+      <View style={{ gap: 8 }}>
+        <Text style={styles.address}>
+          {website ? 'Its website doesn’t list times we could read.' : 'No iqamah times yet.'} Know them? Add them for everyone.
+        </Text>
+        {form || <Chip label="✏️ Add its times" onPress={() => setFixing(true)} />}
+      </View>
+    );
   }
   const rows = IQAMAH_ROWS.filter((p) => state.iqamah[p]);
+  const community = state.source === 'community';
   return (
     <View style={styles.siteCard}>
-      <Text style={styles.siteLabel}>FROM THE MASJID’S WEBSITE</Text>
+      <Text style={styles.siteLabel}>{community ? 'IQAMAH TIMES FROM APP USERS' : 'FROM THE MASJID’S WEBSITE'}</Text>
       {rows.length > 0 && (
         <View style={styles.siteGrid}>
           {rows.map((p) => (
@@ -279,7 +353,273 @@ function WebsiteTimes({ masjid: m, website, auto }: { masjid: { id: string; name
         </Text>
       )}
       {state.note && <Text style={styles.siteNote}>{state.note}</Text>}
-      <Text style={styles.siteNote}>Read automatically, so it can be wrong or out of date. Check with the masjid if it matters.</Text>
+      {!community && <Text style={styles.siteNote}>Read automatically, so it can be wrong or out of date. Check with the masjid if it matters.</Text>}
+      {form || <Chip label="✏️ Times wrong? Fix them" onPress={() => setFixing(true)} />}
+    </View>
+  );
+}
+
+const JUMUAH_PLACEHOLDER = 'Jumu‘ah, e.g. 1:15 PM, 2:15 PM';
+
+/** Lets anyone correct a masjid's times. The fix is shown to everyone who opens this masjid. */
+function FixTimes({ masjid: m, start, onDone }: { masjid: { id: string; name: string }; start: MasjidTimes | null; onDone: (t: MasjidTimes | null) => void }) {
+  const [iqamah, setIqamah] = useState<Record<(typeof IQAMAH_ROWS)[number], string>>(() =>
+    Object.fromEntries(IQAMAH_ROWS.map((p) => [p, start?.iqamah[p] ?? ''])) as Record<(typeof IQAMAH_ROWS)[number], string>,
+  );
+  const [jumuah, setJumuah] = useState(start?.jumuah.join(', ') ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const t = await submitCorrection(m, {
+        iqamah: Object.fromEntries(IQAMAH_ROWS.map((p) => [p, iqamah[p].trim() || null])) as MasjidTimes['iqamah'],
+        jumuah: jumuah.split(/[,;·]/).map((j) => j.trim()).filter(Boolean),
+      });
+      onDone(t);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Couldn’t save. Try again.');
+      setSaving(false);
+    }
+  }
+
+  return (
+    <View style={styles.fixCard}>
+      <Text style={styles.siteLabel}>FIX THE IQAMAH TIMES FOR EVERYONE</Text>
+      <View style={styles.siteGrid}>
+        {IQAMAH_ROWS.map((p) => (
+          <View key={p} style={styles.fixCell}>
+            <Text style={styles.timeName}>{PRAYER_LABELS[p]}</Text>
+            <TextInput
+              value={iqamah[p]}
+              onChangeText={(v) => setIqamah((s) => ({ ...s, [p]: v }))}
+              placeholder={p === 'maghrib' ? 'sunset+5' : '0:00 PM'}
+              placeholderTextColor={colors.muted}
+              style={styles.fixInput}
+              maxLength={40}
+            />
+          </View>
+        ))}
+      </View>
+      <TextInput value={jumuah} onChangeText={setJumuah} placeholder={JUMUAH_PLACEHOLDER} placeholderTextColor={colors.muted} style={styles.input} maxLength={80} />
+      <Text style={styles.siteNote}>Only add times you know are right, like from the masjid’s board or announcements.</Text>
+      {error && <Text style={[styles.siteNote, { color: colors.red }]}>{error}</Text>}
+      <View style={styles.actions}>
+        <Button title={saving ? 'Saving…' : 'Save for everyone'} onPress={save} disabled={saving} style={{ flex: 1 }} />
+        <Button title="Cancel" variant="outline" onPress={() => onDone(null)} style={{ flex: 1 }} />
+      </View>
+    </View>
+  );
+}
+
+/** "I prayed here": +Noor once per prayer per day, shown only when the phone is at the masjid. */
+function CheckIn({ masjid: m }: { masjid: Masjid }) {
+  const { settings } = useSettings();
+  const { earnNoor } = useGame();
+  const now = new Date();
+  const prayer = prayerSlot(prayerTimes({ latitude: m.latitude, longitude: m.longitude, name: m.name, auto: false }, settings, now), now);
+  const [status, setStatus] = useState<{ done: boolean; total: number } | null>(null);
+
+  useEffect(() => {
+    checkedIn(prayer).then(setStatus);
+  }, [prayer]);
+
+  async function press() {
+    if (await checkIn(prayer)) {
+      earnNoor(CHECKIN_NOOR);
+      setStatus((s) => ({ done: true, total: (s?.total ?? 0) + 1 }));
+    }
+  }
+
+  if (!status) return null;
+  if (status.done) {
+    return (
+      <View style={styles.checkDone}>
+        <Text style={styles.nextText}>
+          ✅ You prayed {PRAYER_LABELS[prayer]} at the masjid. {status.total > 1 ? `${status.total} prayers at the masjid so far.` : ''}
+        </Text>
+      </View>
+    );
+  }
+  return <Button title={`🕌 I prayed ${PRAYER_LABELS[prayer]} here  +${CHECKIN_NOOR} Noor`} onPress={press} />;
+}
+
+const LEADS = [5, 10, 15, 20, 30];
+
+/** The user's own masjid, at the top, with reminders before its iqamah. */
+function FavoriteSection({ origin }: { origin: Origin }) {
+  const { settings, update } = useSettings();
+  const fav = settings.favoriteMasjid;
+  if (!fav) {
+    return <Text style={styles.address}>Tip: tap ☆ Make my masjid on your usual masjid to keep it at the top and get reminders before its iqamah.</Text>;
+  }
+  const km = distanceKm(origin.latitude, origin.longitude, fav.latitude, fav.longitude);
+  const hasTimes = settings.favoriteTimes && Object.values(settings.favoriteTimes.iqamah).some(Boolean);
+
+  async function toggleReminders(on: boolean) {
+    if (on && Platform.OS !== 'web' && !(await requestReminderPermission())) {
+      Alert.alert('Notifications are off', 'Turn on notifications for Deen in Settings to get iqamah reminders.');
+      return;
+    }
+    update({ iqamahReminders: on });
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={styles.section}>Your masjid</Text>
+      <MasjidCard masjid={{ ...fav, km, serviceTimes: null }} auto atMasjid={origin.fromGps && km < CHECKIN_KM} />
+      <View style={styles.card}>
+        <View style={styles.siteRow}>
+          <Text style={[styles.nextText, { flex: 1, fontWeight: '800' }]}>Remind me before iqamah</Text>
+          <Switch value={settings.iqamahReminders} onValueChange={toggleReminders} trackColor={{ true: colors.green, false: colors.line }} />
+        </View>
+        {settings.iqamahReminders && (
+          <View style={styles.actions}>
+            {LEADS.map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => update({ iqamahLeadMinutes: n })}
+                style={[styles.chip, settings.iqamahLeadMinutes === n && { backgroundColor: colors.green, borderColor: colors.green }]}
+              >
+                <Text style={[styles.chipText, settings.iqamahLeadMinutes === n && { color: '#fff' }]}>{n} min</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+        <Text style={styles.siteNote}>
+          {Platform.OS === 'web'
+            ? 'Reminders work in the phone app, not in the browser.'
+            : hasTimes
+              ? 'Uses the iqamah and Jumu‘ah times shown above. On Fridays you get a Jumu‘ah reminder instead of Dhuhr.'
+              : 'Reminders start once this masjid has iqamah times. If none show, tap Add its times.'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+type JumuahRow = { masjid: Masjid; jumuah: string[]; community: boolean };
+
+/** Every nearby masjid's Friday prayer times in one list, earliest first. Opens by itself on Fridays. */
+function JumuahFinder({ masjids, now }: { masjids: Masjid[]; now: Date }) {
+  const friday = now.getDay() === 5;
+  const [open, setOpen] = useState(friday);
+  const [rows, setRows] = useState<JumuahRow[] | null>(null);
+
+  useEffect(() => {
+    if (!open || rows || !masjidTimesAvailable) return;
+    const pick = masjids.slice(0, 10);
+    Promise.allSettled(pick.map((m) => fetchMasjidTimes({ id: m.id, name: m.name, website: m.website }))).then((results) => {
+      const found: JumuahRow[] = [];
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value.jumuah.length) found.push({ masjid: pick[i], jumuah: r.value.jumuah, community: r.value.source === 'community' });
+      });
+      setRows(sortByJumuah(found, now));
+    });
+  }, [open, rows, masjids, now]);
+
+  if (!masjidTimesAvailable) return null;
+  if (!open) return <Chip label="🕌 Find Jumu‘ah near me" onPress={() => setOpen(true)} />;
+
+  const open1 = (m: Masjid) => {
+    const links = mapLinks(m);
+    Linking.openURL(Platform.OS === 'ios' ? links.apple : links.google).catch(() => {});
+  };
+
+  return (
+    <View style={[styles.card, { borderColor: colors.green }]}>
+      <View style={styles.siteRow}>
+        <Text style={[styles.name, { flex: 1 }]}>🕌 Jumu‘ah near you</Text>
+        {!friday && (
+          <Pressable onPress={() => setOpen(false)}>
+            <Text style={styles.chipText}>Hide</Text>
+          </Pressable>
+        )}
+      </View>
+      {!rows ? (
+        <View style={styles.siteRow}>
+          <ActivityIndicator color={colors.green} />
+          <Text style={styles.address}>Checking the masjids’ Friday times…</Text>
+        </View>
+      ) : rows.length === 0 ? (
+        <Text style={styles.address}>None of the closest masjids list Jumu‘ah times yet. Add them on a masjid’s card with ✏️ Add its times.</Text>
+      ) : (
+        rows.map((r) => (
+          <Pressable key={r.masjid.id} onPress={() => open1(r.masjid)} style={styles.jumuahRow} accessibilityRole="link">
+            <View style={{ flex: 1 }}>
+              <Text style={styles.jumuahName} numberOfLines={1}>
+                {r.masjid.name}
+              </Text>
+              <Text style={styles.siteNote}>
+                {formatDistance(r.masjid.km)}
+                {r.community ? ' · from app users' : ' · from its website'}
+              </Text>
+            </View>
+            <Text style={styles.jumuahTimes}>{r.jumuah.join('\n')}</Text>
+          </Pressable>
+        ))
+      )}
+    </View>
+  );
+}
+
+/** Look up any masjid by name, near or far. */
+function MasjidSearch({ origin }: { origin: Origin }) {
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<{ query: string; masjids: Masjid[] } | { query: string; error: string } | 'loading' | null>(null);
+
+  async function run() {
+    const q = text.trim();
+    if (q.length < 2) return;
+    setResult('loading');
+    try {
+      setResult({ query: q, masjids: await searchMasjidsByName(q, origin.latitude, origin.longitude) });
+    } catch (e) {
+      setResult({ query: q, error: e instanceof Error ? e.message : 'Search didn’t work. Try again.' });
+    }
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={styles.searchRow}>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          onSubmitEditing={run}
+          placeholder="Search any masjid by name or town"
+          placeholderTextColor={colors.muted}
+          returnKeyType="search"
+          style={[styles.input, { flex: 1 }]}
+        />
+        <Pressable onPress={run} accessibilityRole="button" accessibilityLabel="Search" style={({ pressed }) => [styles.searchBtn, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.searchBtnText}>Search</Text>
+        </Pressable>
+      </View>
+      {result === 'loading' && (
+        <View style={styles.siteRow}>
+          <ActivityIndicator color={colors.green} />
+          <Text style={styles.address}>Searching…</Text>
+        </View>
+      )}
+      {result && result !== 'loading' && (
+        <>
+          <View style={styles.siteRow}>
+            <Text style={[styles.section, { flex: 1 }]}>Results for “{result.query}”</Text>
+            <Pressable onPress={() => { setResult(null); setText(''); }}>
+              <Text style={styles.chipText}>Clear</Text>
+            </Pressable>
+          </View>
+          {'error' in result ? (
+            <Text style={styles.address}>{result.error}</Text>
+          ) : result.masjids.length === 0 ? (
+            <Text style={styles.address}>No masjid found by that name. Try adding the town, like “Dar Al-Hijrah Falls Church”.</Text>
+          ) : (
+            result.masjids.map((m, i) => <MasjidCard key={`s-${m.id}`} masjid={m} auto={i < 2} />)
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -347,6 +687,7 @@ function MyMasjidCard({ masjid: m, onRemove }: { masjid: MyMasjid; onRemove: () 
   const q = encodeURIComponent([m.name, m.place].filter(Boolean).join(', '));
   const apple = `https://maps.apple.com/?q=${q}`;
   const google = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  const waze = `https://waze.com/ul?q=${q}&navigate=yes`;
   const open = (url: string) => Linking.openURL(url).catch(() => {});
   return (
     <View style={[styles.card, { borderColor: colors.gold }]}>
@@ -354,10 +695,11 @@ function MyMasjidCard({ masjid: m, onRemove }: { masjid: MyMasjid; onRemove: () 
         <Text style={styles.name}>⭐ {m.name}</Text>
         {!!m.place && <Text style={styles.address}>{m.place}</Text>}
       </Pressable>
-      {m.website && masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto />}
+      {masjidTimesAvailable && <WebsiteTimes masjid={m} website={m.website} auto />}
       <View style={styles.actions}>
         <Chip label="Apple Maps" onPress={() => open(apple)} />
         <Chip label="Google Maps" onPress={() => open(google)} />
+        <Chip label="Waze" onPress={() => open(waze)} />
         {m.website && <Chip label="Website" onPress={() => open(m.website!)} />}
         <Chip label="Remove" onPress={onRemove} />
       </View>
@@ -404,7 +746,17 @@ const styles = themed(() => ({
   siteCell: { minWidth: 58, flexGrow: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.card },
   siteValue: { fontSize: 13, fontWeight: '900', color: colors.ink, marginTop: 2, textAlign: 'center' },
   siteNote: { color: colors.muted, fontSize: 12, lineHeight: 16 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchBtn: { backgroundColor: colors.green, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  searchBtnText: { color: '#fff', fontWeight: '900' },
   section: { fontSize: 18, fontWeight: '900', color: colors.ink, marginTop: 4 },
   input: { borderWidth: 2, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.ink, backgroundColor: colors.bg },
+  fixCard: { backgroundColor: colors.bg, borderRadius: 14, padding: 12, gap: 8, borderWidth: 2, borderColor: colors.line },
+  fixCell: { width: '30%', flexGrow: 1, gap: 2 },
+  fixInput: { borderWidth: 2, borderColor: colors.line, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, color: colors.ink, backgroundColor: colors.card },
+  checkDone: { backgroundColor: colors.greenLight, borderRadius: 12, padding: 10 },
+  jumuahRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },
+  jumuahName: { fontWeight: '800', color: colors.ink, fontSize: 15 },
+  jumuahTimes: { fontWeight: '900', color: colors.green, textAlign: 'right' },
   credit: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
 }));

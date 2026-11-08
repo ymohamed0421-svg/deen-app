@@ -7,7 +7,8 @@ import { useSettings, type ThemeChoice } from '../../state/SettingsProvider';
 import { colors, themed } from '../../theme';
 
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
-  { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, prayer times and directions', href: '/masjids' },
+  { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, iqamah and Jumu‘ah times, directions', href: '/masjids' },
+  { icon: '🍽️', title: 'Halal food nearby', text: 'Halal restaurants and shops close to you', href: '/halal' },
   { icon: '💰', title: 'Zakat calculator', text: 'See if zakat is due on your savings and gold, and how much', href: '/zakat' },
   { icon: '🤲', title: 'Duas', text: 'Everyday duas with Arabic, transliteration and meaning', href: '/duas' },
   { icon: '📜', title: 'Stories', text: 'The Seerah and the Companions', href: '/stories' },
