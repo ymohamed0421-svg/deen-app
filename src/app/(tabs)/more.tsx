@@ -9,6 +9,9 @@ import { colors, themed } from '../../theme';
 const LINKS: { icon: string; title: string; text: string; href: Href }[] = [
   { icon: '🧠', title: 'Memorize the Quran', text: 'Recite from memory and review weak ayahs', href: '/memorize' },
   { icon: '📖', title: 'Read Arabic', text: 'Learn the letters and read the Quran from zero', href: '/course/arabic' },
+  { icon: '📿', title: 'Dhikr', text: 'Tasbih counter and morning and evening adhkar', href: '/dhikr' },
+  { icon: '🗓️', title: 'Islamic calendar', text: 'Hijri date, Ramadan and Eid countdowns, sunnah fasts', href: '/calendar' },
+  { icon: '🌙', title: 'Ramadan', text: 'Suhoor and iftar, fasting tracker, taraweeh plan', href: '/ramadan' },
   { icon: '🕌', title: 'Masjids near you', text: 'Closest masjids, iqamah and Jumu‘ah times, directions', href: '/masjids' },
   { icon: '🍽️', title: 'Halal food nearby', text: 'Halal restaurants and shops close to you', href: '/halal' },
   { icon: '💰', title: 'Zakat calculator', text: 'See if zakat is due on your savings and gold, and how much', href: '/zakat' },

@@ -8,6 +8,7 @@ import { KIDS_COURSE } from '../../content/course-kids';
 import { UNITS } from '../../content/units';
 import { isDone, isUnlocked, nextLessonId, unitDone } from '../../game/progress';
 import { DailyCard } from '../../components/DailyCard';
+import { WorshipCard } from '../../components/WorshipCard';
 import { useGame } from '../../state/GameProvider';
 import { useSettings } from '../../state/SettingsProvider';
 import { colors, themed } from '../../theme';
@@ -49,6 +50,8 @@ export default function PathScreen() {
           <QuickLink icon="🏅" label="League" onPress={() => router.push('/league')} />
           <QuickLink icon="🛍️" label="Shop" onPress={() => router.push('/shop')} />
         </View>
+
+        <WorshipCard />
 
         <DailyCard />
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
+import { PrayerTracker } from '../../components/PrayerTracker';
 import { CALC_METHODS, PRAYER_LABELS, formatCountdown, formatTime, nextPrayer, prayerTimes, qiblaBearing } from '../../lib/prayer';
 import { requestReminderPermission } from '../../lib/reminders';
 import { QiblaCompass } from '../../components/QiblaCompass';
@@ -41,11 +42,12 @@ export default function PrayerScreen() {
   if (!loc) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={{ padding: 20, gap: 16 }}>
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 48 }}>
           <Text style={styles.title}>Prayer times</Text>
           <Text style={styles.text}>Set your location to see prayer times, the Qibla direction and prayer reminders.</Text>
           <Button title="Set my location" onPress={() => router.push('/location')} />
-        </View>
+          <PrayerTracker />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -81,6 +83,8 @@ export default function PrayerScreen() {
             {formatTime(next.time)} · in {formatCountdown(next.time.getTime() - now.getTime())}
           </Text>
         </View>
+
+        <PrayerTracker />
 
         <View style={styles.card}>
           {ROWS.map((p) => {
